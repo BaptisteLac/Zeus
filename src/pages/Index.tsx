@@ -185,6 +185,27 @@ export default function Index() {
     });
   };
 
+  const handleChangeSession = (session: SessionType) => {
+    // Only show confirmation if user has already started the session (saved at least one exercise)
+    if (savedExercises.size > 0) {
+      const unsaved = exercises.filter((ex) => !savedExercises.has(ex.id));
+      const ok = window.confirm(
+        unsaved.length > 0
+          ? `${unsaved.length} exercice(s) non sauvegardé(s). Changer de séance quand même ?`
+          : `Changer de séance et réinitialiser la progression actuelle ?`
+      );
+      if (!ok) return;
+    }
+
+    setState((prev) => {
+      const updated = { ...prev, currentSession: session };
+      saveState(updated);
+      return updated;
+    });
+    setSavedExercises(new Set());
+    toast.success(`Séance ${session} sélectionnée`);
+  };
+
   const handleExport = () => {
     const data = exportData();
     const blob = new Blob([data], { type: 'application/json' });
@@ -235,6 +256,7 @@ export default function Index() {
         blockChanged={blockChanged}
         onReset={handleReset}
         onChangeBlock={handleChangeBlock}
+        onChangeSession={handleChangeSession}
         onExport={handleExport}
         onImport={handleImport}
       />

@@ -1,4 +1,5 @@
 import { SessionType } from '@/lib/types';
+import SessionSelector from './SessionSelector';
 
 interface SessionHeaderProps {
   session: SessionType;
@@ -7,6 +8,7 @@ interface SessionHeaderProps {
   blockChanged: boolean;
   onReset: () => void;
   onChangeBlock: (block: 1 | 2 | 3) => void;
+  onChangeSession: (session: SessionType) => void;
   onExport: () => void;
   onImport: () => void;
 }
@@ -32,6 +34,7 @@ export default function SessionHeader({
   blockChanged,
   onReset,
   onChangeBlock,
+  onChangeSession,
   onExport,
   onImport,
 }: SessionHeaderProps) {
@@ -54,15 +57,16 @@ export default function SessionHeader({
         </div>
         <div className="flex items-center gap-3 pt-2">
           <button onClick={onExport} className="text-stone transition-colors duration-300 hover:text-foreground" aria-label="Exporter">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
           </button>
           <button onClick={onImport} className="text-stone transition-colors duration-300 hover:text-foreground" aria-label="Importer">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
           </button>
         </div>
       </div>
 
       <div className="mt-4 flex items-center gap-3">
+        <SessionSelector currentSession={session} onChange={onChangeSession} />
         <span className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">
           Bloc {block}
         </span>
