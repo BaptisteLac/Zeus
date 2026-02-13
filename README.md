@@ -1,73 +1,57 @@
-# Welcome to your Lovable project
+# Zeus - High-Performance Workout Tracker
 
-## Project info
+Zeus is a premium, high-performance Progressive Web App (PWA) designed for serious lifters. Focus on your progression, optimize your sessions, and master your gains with a streamlined, mobile-first interface.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+![Zeus Banner](https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop)
 
-## How can I edit this code?
+## ✨ Features
 
-There are several ways of editing your application.
+- **Progressive Tracking**: Intelligently track sets, reps, and RIR (Reps In Reserve).
+- **Premium Design**: Sleek, wellness-studio aesthetic with high-contrast typography.
+- **Dynamic Session Flow**: Real-time rest timers and effortless exercise navigation.
+- **PWA Ready**: Install Zeus on your phone for a native app experience—offline support included.
+- **Stagnation Detection**: Visual cues when your progression slows down.
 
-**Use Lovable**
+## 🚀 Getting Started
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Prerequisites
 
-Changes made via Lovable will be committed automatically to this repo.
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [npm](https://www.npmjs.com/) or [Bun](https://bun.sh/)
 
-**Use your preferred IDE**
+### Installation
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/BaptisteLac/Zeus.git
+   cd Zeus
+   ```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-Follow these steps:
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🛠 Tech Stack
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **Framework**: React 18 + Vite
+- **Styling**: Tailwind CSS + Shadcn/UI
+- **Icons**: Lucide React
+- **PWA**: Vite PWA Plugin
+- **Validation**: Zod + React Hook Form
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 📱 Installation (PWA)
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Zeus is a PWA. To install it on your device:
 
-**Edit a file directly in GitHub**
+- **iOS**: Open in Safari, tap "Share", then "Add to Home Screen".
+- **Android**: Open in Chrome, tap the three dots, then "Install app".
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+*Built with passion for the iron progress.*
