@@ -1,17 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, ExerciseInput, SessionType } from '@/lib/types';
 import { getExercisesForSession } from '@/lib/program';
-import { loadState, saveState, resetState, computeBlock, exportData, importData } from '@/lib/storage';
+import { loadState, saveState, resetState, computeBlock, exportData, importData, getDefaultState } from '@/lib/storage';
 import { calculateProgression } from '@/lib/progression';
+import { getCurrentUser, onAuthStateChange } from '@/lib/cloudStorage';
 import SessionHeader from '@/components/SessionHeader';
 import ExerciseCard from '@/components/ExerciseCard';
 import FloatingTimer from '@/components/FloatingTimer';
+import { AuthModal } from '@/components/AuthModal';
 import { toast } from 'sonner';
+import { Cloud, CloudOff } from 'lucide-react';
 
 const nextSession: Record<SessionType, SessionType> = { A: 'B', B: 'C', C: 'A' };
 
 export default function Index() {
-  const [state, setState] = useState<AppState>(loadState);
+  const [state, setState] = useState<AppState>(getDefaultState);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState<string | undefined>();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [savedExercises, setSavedExercises] = useState<Set<string>>(new Set());
   const [blockChanged, setBlockChanged] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -22,8 +28,37 @@ export default function Index() {
   } | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Load state from storage (async)
+  useEffect(() => {
+    loadState().then((loaded) => {
+      setState(loaded);
+      setIsLoading(false);
+    });
+  }, []);
+
+  // Check auth status
+  useEffect(() => {
+    getCurrentUser().then((user) => {
+      setUserEmail(user?.email);
+    });
+
+    const { data: { subscription } } = onAuthStateChange((authenticated, email) => {
+      setUserEmail(email);
+      if (authenticated) {
+        toast.success('Connecté au cloud');
+        // Reload state from cloud
+        loadState().then((loaded) => setState(loaded));
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   // Compute block from date
   useEffect(() => {
+    if (isLoading) return;
     const { block, week } = computeBlock(state.programStartDate);
     if (block !== state.currentBlock || week !== state.weekNumber) {
       if (block !== state.currentBlock) setBlockChanged(true);
@@ -33,7 +68,7 @@ export default function Index() {
         return updated;
       });
     }
-  }, [state.programStartDate, state.currentBlock, state.weekNumber]);
+  }, [state.programStartDate, state.currentBlock, state.weekNumber, isLoading]);
 
   // Global timer management
   useEffect(() => {
@@ -169,10 +204,11 @@ export default function Index() {
     setSavedExercises(new Set());
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (window.confirm('Réinitialiser le programme ? Toutes les données seront perdues.')) {
       resetState();
-      setState(loadState());
+      const freshState = await loadState();
+      setState(freshState);
       setSavedExercises(new Set());
     }
   };
@@ -241,9 +277,43 @@ export default function Index() {
 
   const allSaved = exercises.every((ex) => savedExercises.has(ex.id));
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-terracotta/20 border-t-terracotta rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-stone">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pb-32">
-      {globalTimer && globalTimer.remaining > 0 && (
+      {/* Cloud sync button */}
+      <button
+        onClick={() => setShowAuthModal(true)}
+        className="fixed top-4 right-4 z-40 p-3 bg-background border border-border rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
+        title={userEmail ? `Connecté: ${userEmail}` : 'Se connecter au cloud'}
+      >
+        {userEmail ? (
+          <Cloud className="w-5 h-5 text-terracotta" />
+        ) : (
+          <CloudOff className="w-5 h-5 text-stone" />
+        )}
+      </button>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        userEmail={userEmail}
+        onAuthChange={() => {
+          getCurrentUser().then((user) => setUserEmail(user?.email));
+        }}
+      />
+
+      {globalTimer && globalTimer.remaining >= 0 && (
         <FloatingTimer
           remaining={globalTimer.remaining}
           onSkip={() => setGlobalTimer(null)}
