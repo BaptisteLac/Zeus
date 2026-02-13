@@ -9,7 +9,6 @@ import ExerciseCard from '@/components/ExerciseCard';
 import FloatingTimer from '@/components/FloatingTimer';
 import { AuthModal } from '@/components/AuthModal';
 import { toast } from 'sonner';
-import { Cloud, CloudOff } from 'lucide-react';
 
 const nextSession: Record<SessionType, SessionType> = { A: 'B', B: 'C', C: 'A' };
 
@@ -290,16 +289,22 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      {/* Cloud sync button */}
+      {/* Auth button */}
       <button
         onClick={() => setShowAuthModal(true)}
-        className="fixed top-4 right-4 z-40 p-3 bg-background border border-border rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
-        title={userEmail ? `Connecté: ${userEmail}` : 'Se connecter au cloud'}
+        className="fixed top-6 right-6 z-40 transition-all hover:scale-105"
+        title={userEmail ? `Connecté: ${userEmail}` : 'Se connecter'}
       >
         {userEmail ? (
-          <Cloud className="w-5 h-5 text-terracotta" />
+          // Avatar with first letter
+          <div className="w-10 h-10 rounded-full bg-terracotta text-white flex items-center justify-center font-medium text-sm shadow-lg">
+            {userEmail.charAt(0).toUpperCase()}
+          </div>
         ) : (
-          <CloudOff className="w-5 h-5 text-stone" />
+          // "Se Connecter" button
+          <div className="px-4 py-2 bg-background border border-border rounded-full shadow-lg hover:shadow-xl transition-all">
+            <span className="text-xs font-medium uppercase tracking-[0.08em] text-stone">Se Connecter</span>
+          </div>
         )}
       </button>
 
@@ -327,8 +332,6 @@ export default function Index() {
         onReset={handleReset}
         onChangeBlock={handleChangeBlock}
         onChangeSession={handleChangeSession}
-        onExport={handleExport}
-        onImport={handleImport}
       />
 
       <input
