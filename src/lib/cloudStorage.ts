@@ -94,15 +94,41 @@ export async function getCurrentUser() {
 }
 
 /**
- * Connexion avec email (magic link)
+ * Inscription avec email + mot de passe
  */
-export async function signInWithEmail(email: string): Promise<SyncResult> {
+export async function signUp(email: string, password: string): Promise<SyncResult> {
     try {
-        const { error } = await supabase.auth.signInWithOtp({
+        const { data, error } = await supabase.auth.signUp({
             email,
+            password,
             options: {
                 emailRedirectTo: window.location.origin,
             },
+        });
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+
+        // Vérifier si l'email est déjà utilisé
+        if (data.user && !data.session) {
+            return { success: false, error: 'Cet email est déjà utilisé. Connectez-vous.' };
+        }
+
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}
+
+/**
+ * Connexion avec email + mot de passe
+ */
+export async function signInWithPassword(email: string, password: string): Promise<SyncResult> {
+    try {
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
         });
 
         if (error) {
