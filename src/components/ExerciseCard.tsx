@@ -1,7 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Exercise, WorkoutEntry, ExerciseInput } from '@/lib/types';
 import { calculateProgression } from '@/lib/progression';
-import RestTimer from './RestTimer';
 
 interface ExerciseCardProps {
   index: number;
@@ -44,7 +43,15 @@ export default function ExerciseCard({
   const [modified, setModified] = useState(false);
   const [savedValues, setSavedValues] = useState<ExerciseInput | null>(null);
 
+  // Set Stepper state
+  const [activeSetIndex, setActiveSetIndex] = useState(0);
+  const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
   const totalReps = sets.reduce((a, b) => a + b, 0);
+  const filledSetsCount = sets.filter((s) => s > 0).length;
+  const allSetsFilled = filledSetsCount === exercise.sets;
+  const canSave = charge > 0 && sets.some((s) => s > 0);
 
   // Track when inputs change after save
   useEffect(() => {
@@ -66,82 +73,168 @@ export default function ExerciseCard({
     });
   };
 
-  const canSave = charge > 0 && sets.some((s) => s > 0);
-
-  const progressionBadge = () => {
-    if (!progression) return null;
-    if (progression.type === 'increase_charge')
-      return (
-        <span className="rounded-full bg-accent/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-accent">
-          ↑ Charge
-        </span>
-      );
-    if (progression.type === 'stagnation')
-      return (
-        <span className="rounded-full bg-primary/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-primary">
-          Stagnation
-        </span>
-      );
-    return (
-      <span className="rounded-full bg-warning/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-warning">
-        ↑ Reps
-      </span>
-    );
+  const handleChipFocus = (i: number) => {
+    setActiveSetIndex(i);
   };
 
-  const progressionBlock = () => {
-    if (!progression) return null;
+  const handleValidateSet = (setIndex: number) => {
+    // Mark the set as completed
+    setCompletedSets((prev) => {
+      const next = new Set(prev);
+      next.add(setIndex);
+      return next;
+    });
 
-    if (progression.type === 'increase_charge') {
-      return (
-        <div className="mt-5 rounded-lg bg-gradient-to-br from-accent/15 via-accent/8 to-accent/5 p-5 border border-accent/20">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xl">🏆</span>
-            <span className="text-[13px] font-bold uppercase tracking-[0.06em] text-accent">
-              Progression validée !
-            </span>
-          </div>
-          <p className="text-base font-medium text-foreground">
-            Passe à <span className="font-mono text-lg font-bold text-accent">{progression.nextCharge} kg</span>
-          </p>
-          <p className="mt-1 text-[12px] text-stone">
-            Nouvelle charge → Objectif minimum : {progression.targetTotalReps} reps total ({exercise.sets}×{exercise.repsMin})
-          </p>
-        </div>
-      );
+    // Move to next uncompleted set
+    const nextIndex = findNextUncompletedSet(setIndex);
+    if (nextIndex !== null) {
+      setActiveSetIndex(nextIndex);
+      // Focus the next input after a small delay for DOM update
+      setTimeout(() => {
+        inputRefs.current[nextIndex]?.focus();
+      }, 100);
     }
 
-    if (progression.type === 'stagnation') {
-      return (
-        <div className="mt-5 rounded-lg bg-gradient-to-br from-primary/12 via-primary/6 to-transparent p-5 border border-primary/20">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xl">⚡</span>
-            <span className="text-[13px] font-bold uppercase tracking-[0.06em] text-primary">
-              Stagnation détectée
-            </span>
-          </div>
-          <p className="text-sm text-foreground/80">
-            Réduis le volume d'1 série ou envisage un deload
-          </p>
-        </div>
-      );
+    // Start timer
+    if (onStartTimer) {
+      onStartTimer(exercise.rest);
     }
-
-    // increase_reps
-    return (
-      <div className="mt-5 rounded-lg bg-gradient-to-br from-warning/12 via-warning/6 to-transparent p-5 border border-warning/20">
-        <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-xl">🔥</span>
-          <span className="text-[13px] font-bold uppercase tracking-[0.06em] text-warning">
-            Pousse tes reps !
-          </span>
-        </div>
-        <p className="text-base font-medium text-foreground">
-          Objectif : battre <span className="font-mono text-lg font-bold text-warning">{progression.targetTotalReps} reps</span> total
-        </p>
-      </div>
-    );
   };
+
+  const findNextUncompletedSet = (afterIndex: number): number | null => {
+    for (let i = afterIndex + 1; i < exercise.sets; i++) {
+      if (!completedSets.has(i)) return i;
+    }
+    return null;
+  };
+
+  const handleSaveAll = () => {
+    if (!canSave) return;
+    const input = { charge, sets, rir };
+    if (modified && onUpdate) {
+      onUpdate(input);
+      setSavedValues(input);
+      setModified(false);
+    } else {
+      onSave(input);
+      setSavedValues(input);
+      // Mark all as completed
+      setCompletedSets(new Set(sets.map((_, i) => i)));
+    }
+  };
+
+  const handleValidateAndSave = () => {
+    if (!canSave) return;
+
+    const currentSetHasReps = sets[activeSetIndex] > 0;
+    const isLastSet = completedSets.size === exercise.sets - 1 && currentSetHasReps;
+
+    if (saved && modified) {
+      // Modification mode
+      const input = { charge, sets, rir };
+      if (onUpdate) onUpdate(input);
+      setSavedValues(input);
+      setModified(false);
+      return;
+    }
+
+    if (allSetsFilled && completedSets.size === 0) {
+      // Free-fill mode: all sets filled at once, save everything
+      handleSaveAll();
+      return;
+    }
+
+    if (isLastSet || (allSetsFilled && completedSets.size > 0)) {
+      // Last set or all filled after some individual validations → save everything
+      handleValidateSet(activeSetIndex);
+      const input = { charge, sets, rir };
+      onSave(input);
+      setSavedValues(input);
+      setCompletedSets(new Set(sets.map((_, i) => i)));
+      return;
+    }
+
+    if (currentSetHasReps) {
+      // Validate individual set + start timer
+      handleValidateSet(activeSetIndex);
+    }
+  };
+
+  // Determine button state
+  const getButtonConfig = () => {
+    if (saved && !modified) {
+      return {
+        label: 'Enregistré ✓',
+        style: 'bg-sage text-warm-white',
+        disabled: false,
+      };
+    }
+    if (saved && modified) {
+      return {
+        label: 'Modifier',
+        style: 'bg-charcoal hover:bg-black text-warm-white',
+        disabled: false,
+      };
+    }
+    if (!canSave) {
+      return {
+        label: 'Enregistrer',
+        style: 'bg-stone/20 text-stone cursor-not-allowed',
+        disabled: true,
+      };
+    }
+    // All sets filled and none validated individually → global save
+    if (allSetsFilled && completedSets.size === 0) {
+      return {
+        label: 'Enregistrer l\'exercice',
+        style: 'bg-charcoal hover:bg-black text-warm-white',
+        disabled: false,
+      };
+    }
+    // Last remaining set
+    const remainingSets = exercise.sets - completedSets.size;
+    if (remainingSets === 1 && sets[activeSetIndex] > 0) {
+      return {
+        label: 'Terminer l\'exercice ✓',
+        style: 'bg-sage hover:bg-sage/90 text-warm-white',
+        disabled: false,
+      };
+    }
+    // Active set has reps → validate + timer
+    if (sets[activeSetIndex] > 0) {
+      return {
+        label: `Valider S${activeSetIndex + 1} & Repos ⏱`,
+        style: 'bg-charcoal hover:bg-black text-warm-white',
+        disabled: false,
+      };
+    }
+    return {
+      label: `Remplir S${activeSetIndex + 1}`,
+      style: 'bg-stone/20 text-stone cursor-not-allowed',
+      disabled: true,
+    };
+  };
+
+  const getChipState = (i: number): 'active' | 'done' | 'pending' => {
+    if (completedSets.has(i) && i !== activeSetIndex) return 'done';
+    if (i === activeSetIndex) return 'active';
+    return 'pending';
+  };
+
+  const chipStyles = {
+    active:
+      'border-2 border-terracotta ring-2 ring-terracotta/20 bg-warm-white',
+    done: 'border border-sage/40 bg-sage/10',
+    pending: 'border border-sand bg-warm-white',
+  };
+
+  const labelStyles = {
+    active: 'text-terracotta font-semibold',
+    done: 'text-sage font-semibold',
+    pending: 'text-stone',
+  };
+
+  const buttonConfig = getButtonConfig();
 
   return (
     <div className="bg-linen rounded-xl shadow-sm p-6 md:p-8 mb-6 border border-sand relative">
@@ -192,7 +285,7 @@ export default function ExerciseCard({
         </div>
       )}
 
-      {/* Inputs - Horizontal Grid Layout */}
+      {/* Inputs */}
       <div className="space-y-4">
         {/* Ligne 1: Charge et RIR */}
         <div className="grid grid-cols-2 gap-4">
@@ -222,67 +315,78 @@ export default function ExerciseCard({
               min={0}
               max={4}
               value={rir}
-              onChange={(e) => setRir(parseInt(e.target.value) || 0)}
+              onChange={(e) => setRir(parseInt(e.target.value))}
               className="w-full bg-warm-white border border-sand rounded-md focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-all px-4 py-3 font-mono text-lg text-charcoal text-center outline-none min-h-[44px]"
               placeholder="1"
             />
           </div>
         </div>
 
-        {/* Ligne 2: Les Séries en ligne */}
+        {/* Set Chips */}
         <div>
-          <div className="flex justify-between items-baseline mb-2">
+          <div className="flex justify-between items-baseline mb-3">
             <label className="font-sans text-xs uppercase tracking-wider text-stone">
-              Répétitions par série
+              Séries
             </label>
             <span className="font-sans text-xs text-graphite font-medium">
               Total: <span className="font-mono text-terracotta">{totalReps}</span>
             </span>
           </div>
-          <div className={`grid ${exercise.sets > 4 ? 'grid-cols-4 md:grid-cols-5' : 'grid-cols-4'} gap-3`}>
-            {sets.map((val, i) => (
-              <input
-                key={i}
-                type="number"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={val || ''}
-                onChange={(e) => handleSetChange(i, e.target.value)}
-                className="w-full bg-warm-white border border-sand rounded-md focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-all px-2 py-3 font-mono text-lg text-charcoal text-center outline-none shadow-sm min-h-[44px]"
-                placeholder="-"
+
+          <div className="flex flex-row gap-2">
+            {sets.map((val, i) => {
+              const state = getChipState(i);
+              return (
+                <div key={i} className="flex flex-col items-center gap-1.5 flex-1 min-w-[60px]">
+                  {/* Set label */}
+                  <span className={`text-[10px] uppercase tracking-widest font-sans ${labelStyles[state]}`}>
+                    {state === 'done' ? '✓' : `S${i + 1}`}
+                  </span>
+
+                  {/* Input chip */}
+                  <div className={`relative w-full rounded-lg transition-all duration-300 ${chipStyles[state]}`}>
+                    <input
+                      ref={(el) => { inputRefs.current[i] = el; }}
+                      type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={val || ''}
+                      onChange={(e) => handleSetChange(i, e.target.value)}
+                      onFocus={() => handleChipFocus(i)}
+                      className={`w-full bg-transparent rounded-lg px-2 py-3 font-mono text-lg text-center outline-none min-h-[48px] transition-colors ${state === 'done' ? 'text-sage font-semibold' : 'text-charcoal'
+                        }`}
+                      placeholder="-"
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Progress bar */}
+          <div className="mt-4 flex items-center gap-3">
+            <div className="flex-1 h-1.5 rounded-full bg-sand/60 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-sage transition-all duration-500 ease-out"
+                style={{
+                  width: `${(completedSets.size / exercise.sets) * 100}%`,
+                }}
               />
-            ))}
+            </div>
+            <span className="font-sans text-[11px] text-stone tabular-nums">
+              {completedSets.size}/{exercise.sets}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Save Button */}
+      {/* Contextual Action Button */}
       <button
-        onClick={() => {
-          if (!canSave) return;
-          const input = { charge, sets, rir };
-          if (modified && onUpdate) {
-            onUpdate(input);
-            setSavedValues(input);
-            setModified(false);
-          } else {
-            onSave(input);
-            setSavedValues(input);
-            // Start timer after save
-            if (onStartTimer) {
-              onStartTimer(exercise.rest);
-            }
-          }
-        }}
-        disabled={!canSave}
-        className={`w-full mt-6 rounded-md transition-all active:scale-[0.98] ${saved && !modified
-            ? 'bg-sage text-warm-white font-sans font-medium text-sm uppercase tracking-wider py-4'
-            : canSave
-              ? 'bg-charcoal hover:bg-black text-warm-white font-sans font-medium text-sm uppercase tracking-wider py-4'
-              : 'bg-stone/20 text-stone cursor-not-allowed font-sans font-medium text-sm uppercase tracking-wider py-4'
-          }`}
+        onClick={handleValidateAndSave}
+        disabled={buttonConfig.disabled}
+        className={`w-full mt-6 rounded-md transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4 ${buttonConfig.style}`}
       >
-        {saved && !modified ? 'Enregistré ✓' : modified ? 'Modifier' : 'Enregistrer & Lancer le repos'}
+        {buttonConfig.label}
       </button>
     </div>
   );

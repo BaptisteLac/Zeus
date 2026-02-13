@@ -3,8 +3,8 @@ import { Exercise, SessionType } from './types';
 const sessionA: Exercise[] = [
   { id: 'a1', name: 'Hack Squat', sets: 4, repsMin: 6, repsMax: 8, rest: 120, rir: '1-2' },
   { id: 'a2', name: 'Développé incliné machine', sets: 4, repsMin: 6, repsMax: 10, rest: 90, rir: '1' },
-  { id: 'a3', name: 'Développé épaules machine', sets: 3, repsMin: 8, repsMax: 12, rest: 90, rir: '1-2' },
-  { id: 'a4', name: 'Élévations latérales machine', sets: 4, repsMin: 12, repsMax: 20, rest: 60, rir: '1' },
+  { id: 'a3', name: 'Développé épaules Smith machine', sets: 3, repsMin: 8, repsMax: 12, rest: 90, rir: '1-2' },
+  { id: 'a4', name: 'Élévations latérales poulie', sets: 4, repsMin: 12, repsMax: 20, rest: 60, rir: '1' },
   { id: 'a5', name: 'Extension triceps corde', sets: 3, repsMin: 10, repsMax: 15, rest: 60, rir: '1' },
 ];
 
