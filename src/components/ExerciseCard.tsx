@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Exercise, WorkoutEntry, ExerciseInput } from '@/lib/types';
 import { calculateProgression } from '@/lib/progression';
+import Sparkline from './Sparkline';
 
 interface ExerciseCardProps {
   index: number;
@@ -10,6 +11,8 @@ interface ExerciseCardProps {
   onUpdate?: (input: ExerciseInput) => void;
   onStartTimer?: (seconds: number) => void;
   saved: boolean;
+  isExpanded?: boolean;
+  onToggle?: () => void;
 }
 
 export default function ExerciseCard({
@@ -20,6 +23,8 @@ export default function ExerciseCard({
   onUpdate,
   onStartTimer,
   saved,
+  isExpanded = true,
+  onToggle,
 }: ExerciseCardProps) {
   const lastEntry = history.length > 0 ? history[history.length - 1] : null;
   const progression = useMemo(
@@ -39,7 +44,7 @@ export default function ExerciseCard({
       lastEntry && lastEntry.sets[i] !== undefined ? lastEntry.sets[i] : 0
     )
   );
-  const [rir, setRir] = useState(1);
+  const [rir, setRir] = useState(lastEntry ? lastEntry.rir : 1);
   const [modified, setModified] = useState(false);
   const [savedValues, setSavedValues] = useState<ExerciseInput | null>(null);
 
@@ -237,157 +242,204 @@ export default function ExerciseCard({
   const buttonConfig = getButtonConfig();
 
   return (
-    <div className="bg-linen rounded-xl shadow-sm p-6 md:p-8 mb-6 border border-sand relative">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div>
+    <div className={`bg-linen rounded-xl shadow-sm border border-sand relative transition-all duration-300 mb-6 ${isExpanded ? 'p-6 md:p-8' : 'hover:border-terracotta/40'} ${saved ? 'animate-success-glow border-sage/40' : ''}`}
+    >
+      {/* Header — always clickable to toggle */}
+      <div
+        className={`flex justify-between items-start cursor-pointer ${isExpanded ? 'mb-6' : 'p-4'}`}
+        onClick={onToggle}
+      >
+        <div className="flex items-center gap-3">
           <h3 className="font-sans font-semibold text-lg uppercase tracking-wider text-charcoal">
             {index + 1}. {exercise.name}
           </h3>
-          <p className="font-sans text-sm text-stone mt-1">
-            Plage : {exercise.repsMin}-{exercise.repsMax} reps · RIR {exercise.rir}
-          </p>
+          {!isExpanded && saved && (
+            <span className="text-sage text-sm">✓</span>
+          )}
         </div>
-        {lastEntry && (
-          <div className="text-right text-sm">
-            <p className="font-sans text-stone uppercase tracking-wide text-xs mb-1">Dernière séance</p>
-            <p className="font-mono text-graphite">{lastEntry.charge}kg ({lastEntry.sets.join('-')})</p>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {!isExpanded && saved && lastEntry && (
+            <span className="font-mono text-sm text-graphite">
+              {lastEntry.charge}kg ({lastEntry.sets.join('-')})
+            </span>
+          )}
+          {!isExpanded && !saved && (
+            <span className="text-[11px] text-stone uppercase tracking-wider">en attente</span>
+          )}
+          {isExpanded && (
+            <p className="font-sans text-sm text-stone mt-1">
+              Plage : {exercise.repsMin}-{exercise.repsMax} reps · RIR {exercise.rir}
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Objectif du Jour */}
-      {progression && (
-        <div className="bg-terracotta/10 border-l-4 border-terracotta p-4 mb-6 rounded-r-md flex items-center gap-3">
-          <span className="text-xl">
-            {progression.type === 'increase_charge' ? '🏆' : progression.type === 'stagnation' ? '⚡' : '📈'}
-          </span>
-          <div>
-            {progression.type === 'increase_charge' && (
-              <>
-                <p className="font-sans font-medium text-charcoal">Objectif : {progression.nextCharge} kg</p>
-                <p className="font-sans text-sm text-graphite">Battre {progression.targetTotalReps} reps au total</p>
-              </>
-            )}
-            {progression.type === 'stagnation' && (
-              <>
-                <p className="font-sans font-medium text-charcoal">Stagnation détectée</p>
-                <p className="font-sans text-sm text-graphite">Réduis le volume ou deload</p>
-              </>
-            )}
-            {progression.type === 'increase_reps' && (
-              <>
-                <p className="font-sans font-medium text-charcoal">Objectif : {progression.nextCharge} kg</p>
-                <p className="font-sans text-sm text-graphite">Battre {progression.targetTotalReps} reps au total</p>
-              </>
-            )}
-          </div>
+      {/* Collapsed: show summary row */}
+      {!isExpanded && !saved && (
+        <div className="px-4 pb-3">
+          <p className="font-sans text-xs text-stone">
+            {exercise.repsMin}-{exercise.repsMax} reps · {exercise.sets} séries · Repos {exercise.rest}s
+          </p>
         </div>
       )}
 
-      {/* Inputs */}
-      <div className="space-y-4">
-        {/* Ligne 1: Charge et RIR */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="font-sans text-xs uppercase tracking-wider text-stone block mb-2">
-              Charge (kg)
-            </label>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.5"
-              min="0"
-              value={charge || ''}
-              onChange={(e) => setCharge(Math.max(0, parseFloat(e.target.value) || 0))}
-              className="w-full bg-warm-white border border-sand rounded-md focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-all px-4 py-3 font-mono text-lg text-charcoal text-center outline-none min-h-[44px]"
-              placeholder="0"
-            />
-          </div>
-          <div>
-            <label className="font-sans text-xs uppercase tracking-wider text-stone block mb-2">
-              RIR Senti
-            </label>
-            <input
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              min={0}
-              max={4}
-              value={rir}
-              onChange={(e) => setRir(parseInt(e.target.value))}
-              className="w-full bg-warm-white border border-sand rounded-md focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-all px-4 py-3 font-mono text-lg text-charcoal text-center outline-none min-h-[44px]"
-              placeholder="1"
-            />
-          </div>
-        </div>
-
-        {/* Set Chips */}
-        <div>
-          <div className="flex justify-between items-baseline mb-3">
-            <label className="font-sans text-xs uppercase tracking-wider text-stone">
-              Séries
-            </label>
-            <span className="font-sans text-xs text-graphite font-medium">
-              Total: <span className="font-mono text-terracotta">{totalReps}</span>
-            </span>
-          </div>
-
-          <div className="flex flex-row gap-2">
-            {sets.map((val, i) => {
-              const state = getChipState(i);
-              return (
-                <div key={i} className="flex flex-col items-center gap-1.5 flex-1 min-w-[60px]">
-                  {/* Set label */}
-                  <span className={`text-[10px] uppercase tracking-widest font-sans ${labelStyles[state]}`}>
-                    {state === 'done' ? '✓' : `S${i + 1}`}
-                  </span>
-
-                  {/* Input chip */}
-                  <div className={`relative w-full rounded-lg transition-all duration-300 ${chipStyles[state]}`}>
-                    <input
-                      ref={(el) => { inputRefs.current[i] = el; }}
-                      type="number"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={val || ''}
-                      onChange={(e) => handleSetChange(i, e.target.value)}
-                      onFocus={() => handleChipFocus(i)}
-                      className={`w-full bg-transparent rounded-lg px-2 py-3 font-mono text-lg text-center outline-none min-h-[48px] transition-colors ${state === 'done' ? 'text-sage font-semibold' : 'text-charcoal'
-                        }`}
-                      placeholder="-"
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Progress bar */}
-          <div className="mt-4 flex items-center gap-3">
-            <div className="flex-1 h-1.5 rounded-full bg-sand/60 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-sage transition-all duration-500 ease-out"
-                style={{
-                  width: `${(completedSets.size / exercise.sets) * 100}%`,
-                }}
-              />
+      {/* Expanded content */}
+      {isExpanded && (
+        <>
+          {/* Last entry + Sparkline (only in expanded) */}
+          {history.length > 0 && (
+            <div className="flex justify-end items-end gap-3 mb-4">
+              {history.length >= 2 && (
+                <Sparkline data={history.map(h => h.charge)} />
+              )}
+              <div className="text-right text-sm">
+                <p className="font-sans text-stone uppercase tracking-wide text-xs mb-1">Dernière séance</p>
+                <p className="font-mono text-graphite">{lastEntry!.charge}kg ({lastEntry!.sets.join('-')})</p>
+              </div>
             </div>
-            <span className="font-sans text-[11px] text-stone tabular-nums">
-              {completedSets.size}/{exercise.sets}
-            </span>
-          </div>
-        </div>
-      </div>
+          )}
 
-      {/* Contextual Action Button */}
-      <button
-        onClick={handleValidateAndSave}
-        disabled={buttonConfig.disabled}
-        className={`w-full mt-6 rounded-md transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4 ${buttonConfig.style}`}
-      >
-        {buttonConfig.label}
-      </button>
+          {/* Objectif du Jour */}
+          {progression && (
+            <div className="bg-terracotta/10 border-l-4 border-terracotta p-4 mb-6 rounded-r-md flex items-center gap-3">
+              <span className="text-xl">
+                {progression.type === 'increase_charge' ? '🏆' : progression.type === 'stagnation' ? '⚡' : '📈'}
+              </span>
+              <div>
+                {progression.type === 'increase_charge' && (
+                  <>
+                    <p className="font-sans font-medium text-charcoal">Objectif : {progression.nextCharge} kg</p>
+                    <p className="font-sans text-sm text-graphite">Battre {progression.targetTotalReps} reps au total</p>
+                  </>
+                )}
+                {progression.type === 'stagnation' && (
+                  <>
+                    <p className="font-sans font-medium text-charcoal">Stagnation détectée</p>
+                    <p className="font-sans text-sm text-graphite">Réduis le volume ou deload</p>
+                  </>
+                )}
+                {progression.type === 'increase_reps' && (
+                  <>
+                    <p className="font-sans font-medium text-charcoal">Objectif : {progression.nextCharge} kg</p>
+                    <p className="font-sans text-sm text-graphite">Battre {progression.targetTotalReps} reps au total</p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Inputs */}
+          <div className="space-y-4">
+            {/* Smart defaults label */}
+            {lastEntry && !saved && (
+              <p className="text-[11px] text-stone italic text-center">
+                Pré-rempli depuis ta dernière séance
+              </p>
+            )}
+
+            {/* Ligne 1: Charge et RIR */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="font-sans text-xs uppercase tracking-wider text-stone block mb-2">
+                  Charge (kg)
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.5"
+                  min="0"
+                  value={charge || ''}
+                  onChange={(e) => setCharge(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="w-full bg-warm-white border border-sand rounded-md focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-all px-4 py-3 font-mono text-lg text-charcoal text-center outline-none min-h-[44px]"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="font-sans text-xs uppercase tracking-wider text-stone block mb-2">
+                  RIR Senti
+                </label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  min={0}
+                  max={4}
+                  value={rir}
+                  onChange={(e) => setRir(parseInt(e.target.value))}
+                  className="w-full bg-warm-white border border-sand rounded-md focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-all px-4 py-3 font-mono text-lg text-charcoal text-center outline-none min-h-[44px]"
+                  placeholder="1"
+                />
+              </div>
+            </div>
+
+            {/* Set Chips */}
+            <div>
+              <div className="flex justify-between items-baseline mb-3">
+                <label className="font-sans text-xs uppercase tracking-wider text-stone">
+                  Séries
+                </label>
+                <span className="font-sans text-xs text-graphite font-medium">
+                  Total: <span className="font-mono text-terracotta">{totalReps}</span>
+                </span>
+              </div>
+
+              <div className="flex flex-row gap-2">
+                {sets.map((val, i) => {
+                  const state = getChipState(i);
+                  return (
+                    <div key={i} className="flex flex-col items-center gap-1.5 flex-1 min-w-[60px]">
+                      {/* Set label */}
+                      <span className={`text-[10px] uppercase tracking-widest font-sans ${labelStyles[state]}`}>
+                        {state === 'done' ? '✓' : `S${i + 1}`}
+                      </span>
+
+                      {/* Input chip */}
+                      <div className={`relative w-full rounded-lg transition-all duration-300 ${chipStyles[state]} ${state === 'done' ? 'animate-chip-bounce' : ''}`}>
+                        <input
+                          ref={(el) => { inputRefs.current[i] = el; }}
+                          type="number"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={val || ''}
+                          onChange={(e) => handleSetChange(i, e.target.value)}
+                          onFocus={() => handleChipFocus(i)}
+                          className={`w-full bg-transparent rounded-lg px-2 py-3 font-mono text-lg text-center outline-none min-h-[48px] transition-colors ${state === 'done' ? 'text-sage font-semibold' : 'text-charcoal'
+                            }`}
+                          placeholder="-"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Progress bar */}
+              <div className="mt-4 flex items-center gap-3">
+                <div className="flex-1 h-1.5 rounded-full bg-sand/60 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-sage transition-all duration-500 ease-out"
+                    style={{
+                      width: `${(completedSets.size / exercise.sets) * 100}%`,
+                    }}
+                  />
+                </div>
+                <span className="font-sans text-[11px] text-stone tabular-nums">
+                  {completedSets.size}/{exercise.sets}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Contextual Action Button */}
+          <button
+            onClick={handleValidateAndSave}
+            disabled={buttonConfig.disabled}
+            className={`w-full mt-6 rounded-md transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4 ${buttonConfig.style}`}
+          >
+            {buttonConfig.label}
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -6,6 +6,8 @@ interface SessionHeaderProps {
   block: 1 | 2 | 3;
   week: number;
   blockChanged: boolean;
+  completedCount: number;
+  totalCount: number;
   onReset: () => void;
   onChangeBlock: (block: 1 | 2 | 3) => void;
   onChangeSession: (session: SessionType) => void;
@@ -30,10 +32,13 @@ export default function SessionHeader({
   block,
   week,
   blockChanged,
+  completedCount,
+  totalCount,
   onReset,
   onChangeBlock,
   onChangeSession,
 }: SessionHeaderProps) {
+  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
   return (
     <div className="sticky top-0 z-30 bg-background px-6 pt-6 pb-4">
       {blockChanged && (
@@ -81,7 +86,23 @@ export default function SessionHeader({
         </div>
       </div>
 
-      <div className="mt-4 h-px bg-border" />
+      {/* Session progress bar */}
+      <div className="mt-4 flex items-center gap-3">
+        <div className="flex-1 h-1.5 rounded-full bg-sand/30 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-700 ease-out ${completedCount === totalCount && totalCount > 0
+                ? 'bg-sage'
+                : 'bg-terracotta/70'
+              }`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <span className="font-sans text-[11px] text-stone tabular-nums whitespace-nowrap">
+          {completedCount}/{totalCount}
+        </span>
+      </div>
+
+      <div className="mt-3 h-px bg-border" />
     </div>
   );
 }

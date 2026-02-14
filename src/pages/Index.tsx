@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AppState, ExerciseInput, SessionType } from '@/lib/types';
 import { getExercisesForSession } from '@/lib/program';
 import { loadState, saveState, resetState, computeBlock, exportData, importData, getDefaultState } from '@/lib/storage';
@@ -7,10 +7,12 @@ import { getCurrentUser, onAuthStateChange } from '@/lib/cloudStorage';
 import SessionHeader from '@/components/SessionHeader';
 import ExerciseCard from '@/components/ExerciseCard';
 import FloatingTimer from '@/components/FloatingTimer';
+import SessionSummary from '@/components/SessionSummary';
 import { AuthModal } from '@/components/AuthModal';
 import { toast } from 'sonner';
 
 const nextSession: Record<SessionType, SessionType> = { A: 'B', B: 'C', C: 'A' };
+const prevSession: Record<SessionType, SessionType> = { A: 'C', B: 'A', C: 'B' };
 
 export default function Index() {
   const [state, setState] = useState<AppState>(getDefaultState);
@@ -19,7 +21,10 @@ export default function Index() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [savedExercises, setSavedExercises] = useState<Set<string>>(new Set());
   const [blockChanged, setBlockChanged] = useState(false);
+  const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [globalTimer, setGlobalTimer] = useState<{
     exerciseName: string;
     remaining: number;
@@ -108,7 +113,15 @@ export default function Index() {
     }
   }, [blockChanged]);
 
-  const exercises = getExercisesForSession(state.currentSession, state.currentBlock);
+  const exercises = useMemo(() => getExercisesForSession(state.currentSession, state.currentBlock), [state.currentSession, state.currentBlock]);
+
+  // Auto-expand first exercise on session load
+  useEffect(() => {
+    if (exercises.length > 0 && expandedExerciseId === null) {
+      setExpandedExerciseId(exercises[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercises]);
 
   const handleStartTimer = useCallback((exerciseName: string, seconds: number) => {
     setGlobalTimer({
@@ -155,6 +168,13 @@ export default function Index() {
         return updated;
       });
       setSavedExercises((prev) => new Set(prev).add(exerciseId));
+
+      // Auto-expand next unsaved exercise
+      const currentIndex = exercises.findIndex(ex => ex.id === exerciseId);
+      const nextUnsaved = exercises.find((ex, i) => i > currentIndex && !savedExercises.has(ex.id) && ex.id !== exerciseId);
+      if (nextUnsaved) {
+        setExpandedExerciseId(nextUnsaved.id);
+      }
     },
     [exercises]
   );
@@ -194,13 +214,18 @@ export default function Index() {
       );
       if (!ok) return;
     }
+    setShowSummary(true);
+  };
 
+  const handleConfirmFinish = () => {
+    setShowSummary(false);
     setState((prev) => {
       const updated = { ...prev, currentSession: nextSession[prev.currentSession] };
       saveState(updated);
       return updated;
     });
     setSavedExercises(new Set());
+    setExpandedExerciseId(null);
   };
 
   const handleReset = async () => {
@@ -276,6 +301,26 @@ export default function Index() {
 
   const allSaved = exercises.every((ex) => savedExercises.has(ex.id));
 
+  // Swipe gesture handlers for session navigation
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    // Must be a horizontal swipe (dx > dy) with sufficient distance
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
+
+    const targetSession = dx < 0
+      ? nextSession[state.currentSession]
+      : prevSession[state.currentSession];
+    handleChangeSession(targetSession);
+  }, [state.currentSession, handleChangeSession]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -288,7 +333,7 @@ export default function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-32" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       {/* Auth button */}
       <button
         onClick={() => setShowAuthModal(true)}
@@ -322,6 +367,9 @@ export default function Index() {
         <FloatingTimer
           remaining={globalTimer.remaining}
           onSkip={() => setGlobalTimer(null)}
+          onAdjust={(delta) => setGlobalTimer(prev =>
+            prev ? { ...prev, remaining: Math.max(0, prev.remaining + delta), total: Math.max(prev.total, prev.remaining + delta) } : null
+          )}
         />
       )}
       <SessionHeader
@@ -329,6 +377,8 @@ export default function Index() {
         block={state.currentBlock}
         week={state.weekNumber}
         blockChanged={blockChanged}
+        completedCount={savedExercises.size}
+        totalCount={exercises.length}
         onReset={handleReset}
         onChangeBlock={handleChangeBlock}
         onChangeSession={handleChangeSession}
@@ -353,6 +403,10 @@ export default function Index() {
             onUpdate={(input) => handleUpdateExercise(exercise.id, input)}
             onStartTimer={(seconds) => handleStartTimer(exercise.name, seconds)}
             saved={savedExercises.has(exercise.id)}
+            isExpanded={expandedExerciseId === exercise.id}
+            onToggle={() => setExpandedExerciseId(
+              expandedExerciseId === exercise.id ? null : exercise.id
+            )}
           />
         ))}
       </div>
@@ -363,14 +417,30 @@ export default function Index() {
           <button
             onClick={handleFinishSession}
             className={`w-full rounded-lg py-4 text-[13px] font-medium uppercase tracking-[0.08em] shadow-lifted transition-all duration-400 ease-smooth hover:-translate-y-0.5 ${allSaved
-              ? 'bg-accent text-accent-foreground'
-              : 'bg-primary text-primary-foreground'
+              ? 'bg-sage text-white animate-pulse'
+              : savedExercises.size === 0
+                ? 'bg-stone/20 text-stone'
+                : 'bg-primary text-primary-foreground'
               }`}
           >
-            Terminer la séance {state.currentSession}
+            {allSaved
+              ? `✓ Terminer la séance ${state.currentSession}`
+              : `Terminer la séance ${state.currentSession} (${savedExercises.size}/${exercises.length})`
+            }
           </button>
         </div>
       </div>
+
+      {/* Session Summary Modal */}
+      {showSummary && (
+        <SessionSummary
+          exercises={exercises}
+          workoutData={state.workoutData}
+          savedExercises={savedExercises}
+          session={state.currentSession}
+          onClose={handleConfirmFinish}
+        />
+      )}
     </div>
   );
 }
