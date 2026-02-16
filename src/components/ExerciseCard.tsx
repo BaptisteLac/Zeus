@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Exercise, WorkoutEntry, ExerciseInput } from '@/lib/types';
 import { calculateProgression } from '@/lib/progression';
-import Sparkline from './Sparkline';
+import { ChevronDown, ChevronUp, History, Info } from 'lucide-react';
 
 interface ExerciseCardProps {
   index: number;
@@ -10,6 +10,7 @@ interface ExerciseCardProps {
   onSave: (input: ExerciseInput) => void;
   onUpdate?: (input: ExerciseInput) => void;
   onStartTimer?: (seconds: number) => void;
+  onEditDefinition?: () => void;
   saved: boolean;
   isExpanded?: boolean;
   onToggle?: () => void;
@@ -22,10 +23,56 @@ export default function ExerciseCard({
   onSave,
   onUpdate,
   onStartTimer,
+  onEditDefinition,
   saved,
   isExpanded = true,
   onToggle,
 }: ExerciseCardProps) {
+  // Long-press detection (supports both touch and mouse)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggered = useRef(false);
+  const isTouchDevice = useRef(false);
+
+  const startLongPress = () => {
+    longPressTriggered.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      if (onEditDefinition) {
+        if (navigator.vibrate) navigator.vibrate(50);
+        onEditDefinition();
+      }
+    }, 500);
+  };
+
+  const endLongPress = (triggerToggle: boolean) => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      return;
+    }
+    if (triggerToggle) onToggle?.();
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressTriggered.current = false;
+  };
+
+  // Touch handlers
+  const handleHeaderTouchStart = () => { isTouchDevice.current = true; startLongPress(); };
+  const handleHeaderTouchEnd = () => endLongPress(true);
+  const handleHeaderTouchCancel = () => cancelLongPress();
+
+  // Mouse handlers (only fire on non-touch devices)
+  const handleHeaderMouseDown = () => { if (!isTouchDevice.current) startLongPress(); };
+  const handleHeaderMouseUp = () => { if (!isTouchDevice.current) endLongPress(true); };
+  const handleHeaderMouseLeave = () => { if (!isTouchDevice.current) cancelLongPress(); };
   const lastEntry = history.length > 0 ? history[history.length - 1] : null;
   const progression = useMemo(
     () => calculateProgression(exercise, history),
@@ -244,10 +291,15 @@ export default function ExerciseCard({
   return (
     <div className={`bg-linen rounded-xl shadow-sm border border-sand relative transition-all duration-300 mb-6 ${isExpanded ? 'p-6 md:p-8' : 'hover:border-terracotta/40'} ${saved ? 'animate-success-glow border-sage/40' : ''}`}
     >
-      {/* Header — always clickable to toggle */}
+      {/* Header — tap to toggle, long-press to edit */}
       <div
-        className={`flex justify-between items-start cursor-pointer ${isExpanded ? 'mb-6' : 'p-4'}`}
-        onClick={onToggle}
+        className={`flex justify-between items-start cursor-pointer select-none ${isExpanded ? 'mb-6' : 'p-4'}`}
+        onTouchStart={handleHeaderTouchStart}
+        onTouchEnd={handleHeaderTouchEnd}
+        onTouchCancel={handleHeaderTouchCancel}
+        onMouseDown={handleHeaderMouseDown}
+        onMouseUp={handleHeaderMouseUp}
+        onMouseLeave={handleHeaderMouseLeave}
       >
         <div className="flex items-center gap-3">
           <h3 className="font-sans font-semibold text-lg uppercase tracking-wider text-charcoal">
@@ -289,9 +341,7 @@ export default function ExerciseCard({
           {/* Last entry + Sparkline (only in expanded) */}
           {history.length > 0 && (
             <div className="flex justify-end items-end gap-3 mb-4">
-              {history.length >= 2 && (
-                <Sparkline data={history.map(h => h.charge)} />
-              )}
+
               <div className="text-right text-sm">
                 <p className="font-sans text-stone uppercase tracking-wide text-xs mb-1">Dernière séance</p>
                 <p className="font-mono text-graphite">{lastEntry!.charge}kg ({lastEntry!.sets.join('-')})</p>

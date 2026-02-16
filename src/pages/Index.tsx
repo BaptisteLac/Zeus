@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { AppState, ExerciseInput, SessionType } from '@/lib/types';
-import { getExercisesForSession } from '@/lib/program';
+import { AppState, Exercise, ExerciseInput, SessionType } from '@/lib/types';
+import { getExercisesForSession, initCustomExercises, generateExerciseId, getAllExerciseCatalog } from '@/lib/program';
 import { loadState, saveState, resetState, computeBlock, exportData, importData, getDefaultState } from '@/lib/storage';
 import { calculateProgression } from '@/lib/progression';
 import { getCurrentUser, onAuthStateChange } from '@/lib/cloudStorage';
@@ -8,6 +8,7 @@ import SessionHeader from '@/components/SessionHeader';
 import ExerciseCard from '@/components/ExerciseCard';
 import FloatingTimer from '@/components/FloatingTimer';
 import SessionSummary from '@/components/SessionSummary';
+import ExerciseFormSheet from '@/components/ExerciseFormSheet';
 import { AuthModal } from '@/components/AuthModal';
 import { toast } from 'sonner';
 
@@ -32,9 +33,18 @@ export default function Index() {
   } | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // CRUD state
+  const [showExerciseForm, setShowExerciseForm] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<Exercise | undefined>(undefined);
+
   // Load state from storage (async)
   useEffect(() => {
     loadState().then((loaded) => {
+      // Initialize customExercises if not present
+      if (!loaded.customExercises) {
+        loaded = { ...loaded, customExercises: initCustomExercises() };
+        saveState(loaded);
+      }
       setState(loaded);
       setIsLoading(false);
     });
@@ -51,7 +61,12 @@ export default function Index() {
       if (authenticated) {
         toast.success('Connecté au cloud');
         // Reload state from cloud
-        loadState().then((loaded) => setState(loaded));
+        loadState().then((loaded) => {
+          if (!loaded.customExercises) {
+            loaded = { ...loaded, customExercises: initCustomExercises() };
+          }
+          setState(loaded);
+        });
       }
     });
 
@@ -113,7 +128,10 @@ export default function Index() {
     }
   }, [blockChanged]);
 
-  const exercises = useMemo(() => getExercisesForSession(state.currentSession, state.currentBlock), [state.currentSession, state.currentBlock]);
+  const exercises = useMemo(
+    () => getExercisesForSession(state.currentSession, state.currentBlock, state.customExercises),
+    [state.currentSession, state.currentBlock, state.customExercises]
+  );
 
   // Auto-expand first exercise on session load
   useEffect(() => {
@@ -206,6 +224,85 @@ export default function Index() {
     []
   );
 
+  // ===== CRUD: Add Exercise =====
+  const handleAddExercise = useCallback(
+    (exerciseData: Omit<Exercise, 'id'>) => {
+      setState((prev) => {
+        const session = prev.currentSession;
+        const currentCustom = prev.customExercises ?? initCustomExercises();
+        const sessionExercises = currentCustom[session] || [];
+        const newId = generateExerciseId(session, sessionExercises);
+        const newExercise: Exercise = { id: newId, ...exerciseData };
+
+        const updatedCustom = {
+          ...currentCustom,
+          [session]: [...sessionExercises, newExercise],
+        };
+
+        const updated = { ...prev, customExercises: updatedCustom };
+        saveState(updated);
+        toast.success(`${exerciseData.name} ajouté ✓`);
+        return updated;
+      });
+    },
+    []
+  );
+
+  // ===== CRUD: Delete Exercise =====
+  const handleDeleteExercise = useCallback(
+    (exerciseId: string) => {
+      setState((prev) => {
+        const session = prev.currentSession;
+        const currentCustom = prev.customExercises ?? initCustomExercises();
+        const sessionExercises = currentCustom[session] || [];
+        const exerciseName = sessionExercises.find(ex => ex.id === exerciseId)?.name;
+
+        const updatedCustom = {
+          ...currentCustom,
+          [session]: sessionExercises.filter((ex) => ex.id !== exerciseId),
+        };
+
+        const updated = { ...prev, customExercises: updatedCustom };
+        saveState(updated);
+
+        // Remove from saved exercises if present
+        setSavedExercises((prevSaved) => {
+          const next = new Set(prevSaved);
+          next.delete(exerciseId);
+          return next;
+        });
+
+        toast.success(`${exerciseName || 'Exercice'} supprimé`);
+        return updated;
+      });
+    },
+    []
+  );
+
+  // ===== CRUD: Edit Exercise Definition =====
+  const handleEditExerciseDefinition = useCallback(
+    (exerciseId: string, exerciseData: Omit<Exercise, 'id'>) => {
+      setState((prev) => {
+        const session = prev.currentSession;
+        const currentCustom = prev.customExercises ?? initCustomExercises();
+        const sessionExercises = currentCustom[session] || [];
+
+        const updatedCustom = {
+          ...currentCustom,
+          [session]: sessionExercises.map((ex) =>
+            ex.id === exerciseId ? { ...ex, ...exerciseData } : ex
+          ),
+        };
+
+        const updated = { ...prev, customExercises: updatedCustom };
+        saveState(updated);
+        toast.success(`${exerciseData.name} modifié ✓`);
+        return updated;
+      });
+    },
+    []
+  );
+
   const handleFinishSession = () => {
     const unsaved = exercises.filter((ex) => !savedExercises.has(ex.id));
     if (unsaved.length > 0) {
@@ -263,6 +360,7 @@ export default function Index() {
       return updated;
     });
     setSavedExercises(new Set());
+    setExpandedExerciseId(null);
     toast.success(`Séance ${session} sélectionnée`);
   };
 
@@ -402,6 +500,10 @@ export default function Index() {
             onSave={(input) => handleSaveExercise(exercise.id, input)}
             onUpdate={(input) => handleUpdateExercise(exercise.id, input)}
             onStartTimer={(seconds) => handleStartTimer(exercise.name, seconds)}
+            onEditDefinition={() => {
+              setEditingExercise(exercise);
+              setShowExerciseForm(true);
+            }}
             saved={savedExercises.has(exercise.id)}
             isExpanded={expandedExerciseId === exercise.id}
             onToggle={() => setExpandedExerciseId(
@@ -409,7 +511,38 @@ export default function Index() {
             )}
           />
         ))}
+
+        {/* Add exercise button */}
+        <button
+          onClick={() => {
+            setEditingExercise(undefined);
+            setShowExerciseForm(true);
+          }}
+          className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-sand hover:border-terracotta/50 py-4 transition-all duration-300 group"
+        >
+          <span className="w-8 h-8 rounded-full bg-terracotta/10 group-hover:bg-terracotta/20 flex items-center justify-center transition-colors">
+            <svg className="w-4 h-4 text-terracotta" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </span>
+        </button>
       </div>
+
+      {/* Exercise Form Sheet (Add / Edit) */}
+      <ExerciseFormSheet
+        open={showExerciseForm}
+        onOpenChange={setShowExerciseForm}
+        exercise={editingExercise}
+        catalog={getAllExerciseCatalog(state.customExercises)}
+        onSubmit={(data) => {
+          if (editingExercise) {
+            handleEditExerciseDefinition(editingExercise.id, data);
+          } else {
+            handleAddExercise(data);
+          }
+        }}
+        onDelete={editingExercise ? () => handleDeleteExercise(editingExercise.id) : undefined}
+      />
 
       {/* Floating finish button */}
       <div className="fixed bottom-0 left-0 right-0 z-40 p-6 bg-gradient-to-t from-background via-background to-transparent">

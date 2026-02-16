@@ -24,6 +24,7 @@ export interface AppState {
   weekNumber: number;
   programStartDate: string;
   workoutData: Record<string, WorkoutEntry[]>;
+  customExercises?: Record<SessionType, Exercise[]>;
   currentSessionData?: {
     exerciseInputs: Record<string, ExerciseInput>;
     savedExercises: string[];
