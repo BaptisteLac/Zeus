@@ -78,33 +78,66 @@
   .font-display {
     font-family: 'Cormorant Garamond', serif;
   }
+
   .font-mono-data {
     font-family: 'IBM Plex Mono', monospace;
   }
 }
 
 /* Micro-animations */
-@keyframes chip-bounce {
-  0%, 100% { transform: scale(1); }
-  40% { transform: scale(1.12); }
-  60% { transform: scale(0.95); }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
-@keyframes card-collapse {
-  from { opacity: 1; max-height: 800px; }
-  to { opacity: 1; max-height: 80px; }
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes success-glow {
-  0% { box-shadow: 0 0 0 0 hsla(100, 14%, 58%, 0.4); }
-  70% { box-shadow: 0 0 0 8px hsla(100, 14%, 58%, 0); }
-  100% { box-shadow: 0 0 0 0 hsla(100, 14%, 58%, 0); }
+  0% {
+    box-shadow: 0 0 0 0 hsla(100, 14%, 58%, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px hsla(100, 14%, 58%, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 hsla(100, 14%, 58%, 0);
+  }
 }
 
-.animate-chip-bounce {
-  animation: chip-bounce 0.4s ease-out;
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out forwards;
 }
 
 .animate-success-glow {
   animation: success-glow 0.8s ease-out;
+}
+
+/* Safe area utility */
+.pb-safe {
+  padding-bottom: max(8rem, env(safe-area-inset-bottom) + 6rem);
+}
+
+.shadow-glow {
+  box-shadow: 0 0 20px hsla(14, 60%, 57%, 0.4);
 }

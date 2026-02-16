@@ -13,6 +13,8 @@ interface SessionHeaderProps {
   onChangeSession: (session: SessionType) => void;
 }
 
+import { ChevronDown, RotateCcw } from 'lucide-react';
+
 const sessionLabels: Record<SessionType, string> = {
   A: 'Séance A',
   B: 'Séance B',
@@ -58,30 +60,37 @@ export default function SessionHeader({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <SessionSelector currentSession={session} onChange={onChangeSession} />
-        <span className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">
-          Bloc {block}
-        </span>
-        <span className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-stone">
-          Semaine {week}
-        </span>
 
-        <div className="flex items-center gap-2 ml-auto">
-          <select
-            value={block}
-            onChange={(e) => onChangeBlock(Number(e.target.value) as 1 | 2 | 3)}
-            className="rounded-md border border-border bg-transparent px-2 py-1 text-[11px] font-medium text-stone focus:outline-none focus:border-primary"
-          >
-            <option value={1}>Bloc 1</option>
-            <option value={2}>Bloc 2</option>
-            <option value={3}>Bloc 3</option>
-          </select>
+        <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
+          {/* Week Badge */}
+          <div className="flex items-center whitespace-nowrap rounded-md border border-border px-3 py-1.5 bg-background">
+            <span className="text-[10px] font-sans font-medium uppercase tracking-wider text-stone/70 mr-1.5">Semaine</span>
+            <span className="text-xs font-mono font-medium text-foreground">{week}</span>
+          </div>
+
+          {/* Block Select */}
+          <div className="relative group flex-1 sm:flex-none">
+            <select
+              value={block}
+              onChange={(e) => onChangeBlock(Number(e.target.value) as 1 | 2 | 3)}
+              className="appearance-none w-full bg-background border border-border rounded-md pl-3 pr-8 py-1.5 text-xs font-medium text-stone focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta/20 transition-all cursor-pointer hover:border-stone/40 shadow-sm"
+            >
+              <option value={1}>Bloc 1</option>
+              <option value={2}>Bloc 2</option>
+              <option value={3}>Bloc 3</option>
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-stone pointer-events-none group-hover:text-foreground transition-colors" />
+          </div>
+
+          {/* Reset Button */}
           <button
             onClick={onReset}
-            className="text-[11px] font-medium uppercase tracking-[0.06em] text-stone transition-colors duration-300 hover:text-primary whitespace-nowrap"
+            className="ml-auto sm:ml-2 p-2 rounded-md hover:bg-stone/5 text-stone/60 hover:text-destructive transition-colors"
+            title="Réinitialiser"
           >
-            Reset
+            <RotateCcw className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -91,8 +100,8 @@ export default function SessionHeader({
         <div className="flex-1 h-1.5 rounded-full bg-sand/30 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-700 ease-out ${completedCount === totalCount && totalCount > 0
-                ? 'bg-sage'
-                : 'bg-terracotta/70'
+              ? 'bg-sage'
+              : 'bg-terracotta/70'
               }`}
             style={{ width: `${progress}%` }}
           />

@@ -11,6 +11,17 @@ import SessionSummary from '@/components/SessionSummary';
 import ExerciseFormSheet from '@/components/ExerciseFormSheet';
 import { AuthModal } from '@/components/AuthModal';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { fireConfetti } from '@/lib/confetti';
 
 const nextSession: Record<SessionType, SessionType> = { A: 'B', B: 'C', C: 'A' };
 const prevSession: Record<SessionType, SessionType> = { A: 'C', B: 'A', C: 'B' };
@@ -36,6 +47,15 @@ export default function Index() {
   // CRUD state
   const [showExerciseForm, setShowExerciseForm] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | undefined>(undefined);
+
+  const [alertConfig, setAlertConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    variant?: 'default' | 'destructive';
+    confirmLabel?: string;
+  }>({ isOpen: false, title: '', description: '', onConfirm: () => { } });
 
   // Load state from storage (async)
   useEffect(() => {
@@ -306,10 +326,14 @@ export default function Index() {
   const handleFinishSession = () => {
     const unsaved = exercises.filter((ex) => !savedExercises.has(ex.id));
     if (unsaved.length > 0) {
-      const ok = window.confirm(
-        `${unsaved.length} exercice(s) non sauvegardé(s). Terminer quand même ?`
-      );
-      if (!ok) return;
+      setAlertConfig({
+        isOpen: true,
+        title: "Séance incomplète",
+        description: `${unsaved.length} exercice(s) non sauvegardé(s). Voulez-vous vraiment terminer la séance ?`,
+        confirmLabel: "Terminer",
+        onConfirm: () => setShowSummary(true)
+      });
+      return;
     }
     setShowSummary(true);
   };
@@ -326,12 +350,19 @@ export default function Index() {
   };
 
   const handleReset = async () => {
-    if (window.confirm('Réinitialiser le programme ? Toutes les données seront perdues.')) {
-      resetState();
-      const freshState = await loadState();
-      setState(freshState);
-      setSavedExercises(new Set());
-    }
+    setAlertConfig({
+      isOpen: true,
+      title: "Réinitialiser le programme ?",
+      description: "Toutes les données et l'historique seront définitivement perdus. Cette action est irréversible.",
+      variant: 'destructive',
+      confirmLabel: "Réinitialiser",
+      onConfirm: async () => {
+        resetState();
+        const freshState = await loadState();
+        setState(freshState);
+        setSavedExercises(new Set());
+      }
+    });
   };
 
   const handleChangeBlock = (block: 1 | 2 | 3) => {
@@ -343,25 +374,34 @@ export default function Index() {
   };
 
   const handleChangeSession = (session: SessionType) => {
+    const confirmChange = () => {
+      setState((prev) => {
+        const updated = { ...prev, currentSession: session };
+        saveState(updated);
+        return updated;
+      });
+      setSavedExercises(new Set());
+      setExpandedExerciseId(null);
+      toast.success(`Séance ${session} sélectionnée`);
+    };
+
     // Only show confirmation if user has already started the session (saved at least one exercise)
     if (savedExercises.size > 0) {
       const unsaved = exercises.filter((ex) => !savedExercises.has(ex.id));
-      const ok = window.confirm(
-        unsaved.length > 0
-          ? `${unsaved.length} exercice(s) non sauvegardé(s). Changer de séance quand même ?`
-          : `Changer de séance et réinitialiser la progression actuelle ?`
-      );
-      if (!ok) return;
+      const message = unsaved.length > 0
+        ? `${unsaved.length} exercice(s) non sauvegardé(s). Changer de séance quand même ?`
+        : `Changer de séance et réinitialiser la progression actuelle ?`;
+
+      setAlertConfig({
+        isOpen: true,
+        title: "Changer de séance ?",
+        description: message,
+        onConfirm: confirmChange
+      });
+      return;
     }
 
-    setState((prev) => {
-      const updated = { ...prev, currentSession: session };
-      saveState(updated);
-      return updated;
-    });
-    setSavedExercises(new Set());
-    setExpandedExerciseId(null);
-    toast.success(`Séance ${session} sélectionnée`);
+    confirmChange();
   };
 
   const handleExport = () => {
@@ -397,7 +437,15 @@ export default function Index() {
     e.target.value = '';
   };
 
-  const allSaved = exercises.every((ex) => savedExercises.has(ex.id));
+  const allSaved = exercises.length > 0 && exercises.every((ex) => savedExercises.has(ex.id));
+  const prevAllSaved = useRef(allSaved);
+
+  useEffect(() => {
+    if (allSaved && !prevAllSaved.current) {
+      fireConfetti();
+    }
+    prevAllSaved.current = allSaved;
+  }, [allSaved]);
 
   // Swipe gesture handlers for session navigation
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -464,6 +512,7 @@ export default function Index() {
       {globalTimer && globalTimer.remaining >= 0 && (
         <FloatingTimer
           remaining={globalTimer.remaining}
+          total={globalTimer.total}
           onSkip={() => setGlobalTimer(null)}
           onAdjust={(delta) => setGlobalTimer(prev =>
             prev ? { ...prev, remaining: Math.max(0, prev.remaining + delta), total: Math.max(prev.total, prev.remaining + delta) } : null
@@ -550,7 +599,7 @@ export default function Index() {
           <button
             onClick={handleFinishSession}
             className={`w-full rounded-lg py-4 text-[13px] font-medium uppercase tracking-[0.08em] shadow-lifted transition-all duration-400 ease-smooth hover:-translate-y-0.5 ${allSaved
-              ? 'bg-sage text-white animate-pulse'
+              ? 'bg-gradient-to-r from-sage to-terracotta text-white animate-pulse shadow-glow'
               : savedExercises.size === 0
                 ? 'bg-stone/20 text-stone'
                 : 'bg-primary text-primary-foreground'
@@ -574,6 +623,27 @@ export default function Index() {
           onClose={handleConfirmFinish}
         />
       )}
+
+      {/* Global Alert Dialog */}
+      <AlertDialog open={alertConfig.isOpen} onOpenChange={(open) => !open && setAlertConfig(prev => ({ ...prev, isOpen: false }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertConfig.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {alertConfig.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={alertConfig.onConfirm}
+              className={alertConfig.variant === 'destructive' ? 'bg-red-500 hover:bg-red-600' : ''}
+            >
+              {alertConfig.confirmLabel || "Continuer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Exercise, WorkoutEntry, ExerciseInput } from '@/lib/types';
 import { calculateProgression } from '@/lib/progression';
-import { ChevronDown, ChevronUp, History, Info } from 'lucide-react';
+import { Check, ChevronDown, Dumbbell, MoreVertical, RotateCw, Trash2, History } from "lucide-react";
+import { cn } from '@/lib/utils';
+import { NumberStepper } from './ui/NumberStepper';
 
 interface ExerciseCardProps {
   index: number;
@@ -286,62 +288,98 @@ export default function ExerciseCard({
     pending: 'text-stone',
   };
 
+  const getStatusStyles = () => {
+    if (saved) return "border-l-4 border-l-sage bg-sage/5 opacity-80";
+    if (isExpanded) return "border-l-4 border-l-terracotta bg-white shadow-md my-4";
+    return "border-l-4 border-l-transparent bg-linen/50 hover:bg-linen hover:border-l-sand/30 mb-3";
+  };
+
+  const statusBadge = saved ? (
+    <span className="px-2.5 py-0.5 rounded-full bg-sage/10 text-sage text-xs font-medium border border-sage/20 flex items-center gap-1">
+      <Check className="w-3 h-3" />
+      VALIDÉ
+    </span>
+  ) : isExpanded ? (
+    <span className="px-2.5 py-0.5 rounded-full bg-terracotta/10 text-terracotta text-xs font-medium border border-terracotta/20">
+      EN COURS
+    </span>
+  ) : (
+    <span className="px-2.5 py-0.5 rounded-full bg-sand/30 text-stone text-xs font-medium border border-sand/30">
+      EN ATTENTE
+    </span>
+  );
   const buttonConfig = getButtonConfig();
 
   return (
-    <div className={`bg-linen rounded-xl shadow-sm border border-sand relative transition-all duration-300 mb-6 ${isExpanded ? 'p-6 md:p-8' : 'hover:border-terracotta/40'} ${saved ? 'animate-success-glow border-sage/40' : ''}`}
-    >
-      {/* Header — tap to toggle, long-press to edit */}
-      <div
-        className={`flex justify-between items-start cursor-pointer select-none ${isExpanded ? 'mb-6' : 'p-4'}`}
-        onTouchStart={handleHeaderTouchStart}
-        onTouchEnd={handleHeaderTouchEnd}
-        onTouchCancel={handleHeaderTouchCancel}
-        onMouseDown={handleHeaderMouseDown}
-        onMouseUp={handleHeaderMouseUp}
-        onMouseLeave={handleHeaderMouseLeave}
-      >
-        <div className="flex items-center gap-3">
-          <h3 className="font-sans font-semibold text-lg uppercase tracking-wider text-charcoal">
-            {index + 1}. {exercise.name}
-          </h3>
-          {!isExpanded && saved && (
-            <span className="text-sage text-sm">✓</span>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          {!isExpanded && saved && lastEntry && (
-            <span className="font-mono text-sm text-graphite">
-              {lastEntry.charge}kg ({lastEntry.sets.join('-')})
-            </span>
-          )}
-          {!isExpanded && !saved && (
-            <span className="text-[11px] text-stone uppercase tracking-wider">en attente</span>
-          )}
-          {isExpanded && (
-            <p className="font-sans text-sm text-stone mt-1">
-              Plage : {exercise.repsMin}-{exercise.repsMax} reps · RIR {exercise.rir}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Collapsed: show summary row */}
-      {!isExpanded && !saved && (
-        <div className="px-4 pb-3">
-          <p className="font-sans text-xs text-stone">
-            {exercise.repsMin}-{exercise.repsMax} reps · {exercise.sets} séries · Repos {exercise.rest}s
-          </p>
-        </div>
+    <div
+      className={cn(
+        "relative overflow-hidden transition-all duration-500 ease-out border border-white/20 rounded-xl",
+        getStatusStyles()
       )}
+    >
+      <div
+        className={cn(
+          "px-4 py-4 flex flex-col gap-2 transition-all duration-300",
+          isExpanded ? "pb-2" : ""
+        )}
+        onClick={() => !isExpanded && onToggle?.()}
+      >
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex-1 min-w-0" onClick={() => isExpanded && onToggle?.()}>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between w-full">
+                <h3 className={cn(
+                  "font-display text-lg leading-tight truncate pr-2 transition-colors duration-300",
+                  isExpanded ? "text-charcoal font-semibold" : "text-stone"
+                )}>
+                  {exercise.name}
+                </h3>
+                <ChevronDown
+                  className={cn(
+                    "w-5 h-5 text-sand transition-transform duration-500 ease-out flex-shrink-0",
+                    isExpanded ? "rotate-180 text-terracotta" : ""
+                  )}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                {statusBadge}
+                {!isExpanded && lastEntry && (
+                  <span className="text-xs text-stone/60 font-mono flex items-center gap-1">
+                    <History className="w-3 h-3" />
+                    {lastEntry.charge}kg
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Collapsed view summary - Only show when NOT expanded and NOT saved */}
+        {!isExpanded && !saved && (
+          <div className="flex items-center gap-2 mt-1 animate-fade-in">
+            <span className="text-xs font-mono text-stone/80 bg-white/50 px-2 py-0.5 rounded-md">
+              {sets.length} séries
+            </span>
+            <span className="text-xs font-mono text-stone/80 bg-white/50 px-2 py-0.5 rounded-md">
+              {exercise.repsMin}-{exercise.repsMax} reps
+            </span>
+          </div>
+        )}
+
+        {isExpanded && (
+          <p className="font-sans text-sm text-stone mt-1">
+            Plage : {exercise.repsMin}-{exercise.repsMax} reps · RIR {exercise.rir}
+          </p>
+        )}
+      </div>
 
       {/* Expanded content */}
       {isExpanded && (
-        <>
-          {/* Last entry + Sparkline (only in expanded) */}
+        <div className="px-4 pb-4 animate-slide-down">
+          {/* Last entry + Sparkline */}
           {history.length > 0 && (
             <div className="flex justify-end items-end gap-3 mb-4">
-
               <div className="text-right text-sm">
                 <p className="font-sans text-stone uppercase tracking-wide text-xs mb-1">Dernière séance</p>
                 <p className="font-mono text-graphite">{lastEntry!.charge}kg ({lastEntry!.sets.join('-')})</p>
@@ -390,35 +428,48 @@ export default function ExerciseCard({
             {/* Ligne 1: Charge et RIR */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="font-sans text-xs uppercase tracking-wider text-stone block mb-2">
+                <label className="font-sans text-xs uppercase tracking-wider text-stone block mb-2 text-center">
                   Charge (kg)
                 </label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.5"
-                  min="0"
-                  value={charge || ''}
-                  onChange={(e) => setCharge(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full bg-warm-white border border-sand rounded-md focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-all px-4 py-3 font-mono text-lg text-charcoal text-center outline-none min-h-[44px]"
-                  placeholder="0"
+                <NumberStepper
+                  value={charge}
+                  onChange={setCharge}
+                  step={0.5}
+                  min={0}
+                  max={500}
                 />
               </div>
               <div>
-                <label className="font-sans text-xs uppercase tracking-wider text-stone block mb-2">
+                <label className="font-sans text-xs uppercase tracking-wider text-stone block mb-2 text-center">
                   RIR Senti
                 </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  min={0}
-                  max={4}
-                  value={rir}
-                  onChange={(e) => setRir(parseInt(e.target.value))}
-                  className="w-full bg-warm-white border border-sand rounded-md focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-all px-4 py-3 font-mono text-lg text-charcoal text-center outline-none min-h-[44px]"
-                  placeholder="1"
-                />
+                <div className="flex items-center justify-between bg-warm-white border border-sand rounded-lg p-1 h-[52px]">
+                  {[0, 1, 2, 3].map((val) => (
+                    <button
+                      key={val}
+                      onClick={() => setRir(val)}
+                      className={cn(
+                        "flex-1 h-full rounded-md text-sm font-mono transition-all",
+                        rir === val
+                          ? "bg-terracotta text-white shadow-sm font-medium"
+                          : "text-stone hover:bg-sand/20"
+                      )}
+                    >
+                      {val}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setRir(4)}
+                    className={cn(
+                      "flex-1 h-full rounded-md text-sm font-mono transition-all",
+                      rir >= 4
+                        ? "bg-terracotta text-white shadow-sm font-medium"
+                        : "text-stone hover:bg-sand/20"
+                    )}
+                  >
+                    4+
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -439,12 +490,18 @@ export default function ExerciseCard({
                   return (
                     <div key={i} className="flex flex-col items-center gap-1.5 flex-1 min-w-[60px]">
                       {/* Set label */}
-                      <span className={`text-[10px] uppercase tracking-widest font-sans ${labelStyles[state]}`}>
+                      <span className={cn(
+                        "text-[10px] uppercase tracking-widest font-sans",
+                        labelStyles[state]
+                      )}>
                         {state === 'done' ? '✓' : `S${i + 1}`}
                       </span>
 
                       {/* Input chip */}
-                      <div className={`relative w-full rounded-lg transition-all duration-300 ${chipStyles[state]} ${state === 'done' ? 'animate-chip-bounce' : ''}`}>
+                      <div className={cn(
+                        "relative w-full rounded-lg transition-all duration-300",
+                        chipStyles[state]
+                      )}>
                         <input
                           ref={(el) => { inputRefs.current[i] = el; }}
                           type="number"
@@ -453,8 +510,10 @@ export default function ExerciseCard({
                           value={val || ''}
                           onChange={(e) => handleSetChange(i, e.target.value)}
                           onFocus={() => handleChipFocus(i)}
-                          className={`w-full bg-transparent rounded-lg px-2 py-3 font-mono text-lg text-center outline-none min-h-[48px] transition-colors ${state === 'done' ? 'text-sage font-semibold' : 'text-charcoal'
-                            }`}
+                          className={cn(
+                            "w-full bg-transparent rounded-lg px-2 py-3 font-mono text-lg text-center outline-none min-h-[48px] transition-colors",
+                            state === 'done' ? 'text-sage font-semibold' : 'text-charcoal'
+                          )}
                           placeholder="-"
                         />
                       </div>
@@ -484,11 +543,14 @@ export default function ExerciseCard({
           <button
             onClick={handleValidateAndSave}
             disabled={buttonConfig.disabled}
-            className={`w-full mt-6 rounded-md transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4 ${buttonConfig.style}`}
+            className={cn(
+              "w-full mt-6 rounded-md transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4",
+              buttonConfig.style
+            )}
           >
             {buttonConfig.label}
           </button>
-        </>
+        </div>
       )}
     </div>
   );
