@@ -229,14 +229,14 @@ export default function ExerciseCard({
     if (saved && modified) {
       return {
         label: 'Modifier',
-        style: 'bg-charcoal hover:bg-black text-warm-white',
+        style: 'bg-primary hover:bg-primary/90 text-primary-foreground',
         disabled: false,
       };
     }
     if (!canSave) {
       return {
         label: 'Enregistrer',
-        style: 'bg-stone/20 text-stone cursor-not-allowed',
+        style: 'bg-muted text-muted-foreground cursor-not-allowed',
         disabled: true,
       };
     }
@@ -244,7 +244,7 @@ export default function ExerciseCard({
     if (allSetsFilled && completedSets.size === 0) {
       return {
         label: 'Enregistrer l\'exercice',
-        style: 'bg-charcoal hover:bg-black text-warm-white',
+        style: 'bg-sage hover:bg-sage/90 text-white shadow-lg shadow-sage/20',
         disabled: false,
       };
     }
@@ -267,7 +267,7 @@ export default function ExerciseCard({
     }
     return {
       label: `Remplir S${activeSetIndex + 1}`,
-      style: 'bg-stone/20 text-stone cursor-not-allowed',
+      style: 'bg-muted text-muted-foreground cursor-not-allowed',
       disabled: true,
     };
   };
@@ -294,7 +294,7 @@ export default function ExerciseCard({
   const getStatusStyles = () => {
     if (saved) return "bg-surface/50 border-t border-white/5 opacity-60";
     if (isExpanded) return "bg-surface border-t border-white/10 my-4 shadow-none";
-    return "bg-surface/30 border-t border-white/5 hover:bg-surface/50 mb-3";
+    return "bg-surface border-t border-white/5 hover:bg-surface/90 mb-3 transition-colors";
   };
 
   const statusBadge = saved ? (
@@ -371,7 +371,7 @@ export default function ExerciseCard({
         )}
 
         {isExpanded && (
-          <p className="font-sans text-sm text-stone mt-1">
+          <p className="font-sans text-sm text-muted-foreground mt-1">
             Plage : {exercise.repsMin}-{exercise.repsMax} reps · RIR {exercise.rir}
           </p>
         )}
@@ -384,7 +384,7 @@ export default function ExerciseCard({
           {history.length > 0 && (
             <div className="flex justify-end items-end gap-3 mb-4">
               <div className="text-right text-sm">
-                <p className="font-sans text-stone uppercase tracking-wide text-xs mb-1">Dernière séance</p>
+                <p className="font-sans text-muted-foreground uppercase tracking-wide text-xs mb-1">Dernière séance</p>
                 <p className="font-mono text-graphite">{lastEntry!.charge}kg ({lastEntry!.sets.join('-')})</p>
               </div>
             </div>
@@ -421,12 +421,7 @@ export default function ExerciseCard({
 
           {/* Inputs */}
           <div className="space-y-4">
-            {/* Smart defaults label */}
-            {lastEntry && !saved && (
-              <p className="text-[11px] text-stone italic text-center">
-                Pré-rempli depuis ta dernière séance
-              </p>
-            )}
+
 
             {/* Ligne 1: Charge et RIR */}
             <div className="grid grid-cols-2 gap-4">
@@ -551,7 +546,7 @@ export default function ExerciseCard({
             className={cn(
               "w-full mt-6 rounded-full transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4 min-h-[48px]",
               buttonConfig.label.includes('Valider') ? 'bg-brand text-white hover:bg-brand/90' :
-                buttonConfig.style.replace('bg-charcoal', 'bg-surface border border-white/10').replace('rounded-md', 'rounded-full')
+                buttonConfig.style.replace('bg-primary', 'bg-surface border border-white/10').replace('rounded-md', 'rounded-full')
             )}
           >
             {buttonConfig.label}

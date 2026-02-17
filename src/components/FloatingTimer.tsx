@@ -2,12 +2,13 @@ import { X, Minus, Plus, SkipForward } from "lucide-react";
 
 interface FloatingTimerProps {
     remaining: number;
-    total: number; // Added total prop
+    total: number;
     onSkip: () => void;
+    onClose: () => void;
     onAdjust?: (delta: number) => void;
 }
 
-export default function FloatingTimer({ remaining, total, onSkip, onAdjust }: FloatingTimerProps) {
+export default function FloatingTimer({ remaining, total, onSkip, onClose, onAdjust }: FloatingTimerProps) {
     const mins = Math.floor(remaining / 60);
     const secs = remaining % 60;
 
@@ -22,7 +23,7 @@ export default function FloatingTimer({ remaining, total, onSkip, onAdjust }: Fl
     if (remaining <= 0) return null;
 
     return (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-app/90 backdrop-blur-md rounded-full border border-input shadow-2xl flex items-center p-1.5 gap-4 z-50 animate-slide-down pr-6 ring-1 ring-white/5">
+        <div className="fixed bottom-28 left-1/2 -translate-x-1/2 bg-app/90 backdrop-blur-md rounded-full border border-input shadow-2xl flex items-center p-1.5 gap-4 z-50 animate-slide-down pr-1 ring-1 ring-white/5">
             {/* Circular Progress + Time */}
             <div className="relative w-14 h-14 flex items-center justify-center bg-surface/50 rounded-full border border-white/5">
                 {/* Background track */}
@@ -71,13 +72,23 @@ export default function FloatingTimer({ remaining, total, onSkip, onAdjust }: Fl
                 )}
             </div>
 
-            <button
-                onClick={onSkip}
-                className="ml-2 flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface hover:bg-surface/80 text-primary transition-all active:scale-95 group border border-white/5"
-            >
-                <SkipForward className="w-4 h-4 text-brand" />
-                <span className="font-sans text-[10px] uppercase tracking-widest font-semibold text-muted-foreground group-hover:text-primary">Skip</span>
-            </button>
+            <div className="flex items-center gap-1 pr-1">
+                <button
+                    onClick={onSkip}
+                    className="flex items-center justify-center w-8 h-8 rounded-full bg-surface hover:bg-surface/80 text-brand transition-all active:scale-95 border border-white/5"
+                    title="Passer"
+                >
+                    <SkipForward className="w-4 h-4" />
+                </button>
+
+                <button
+                    onClick={onClose}
+                    className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-surface/80 text-muted-foreground hover:text-destructive transition-all active:scale-95"
+                    title="Arrêter"
+                >
+                    <X className="w-4 h-4" />
+                </button>
+            </div>
         </div>
     );
 }

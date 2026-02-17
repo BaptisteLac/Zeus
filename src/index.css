@@ -7,7 +7,8 @@
     /* Muscle Buddy 2.0 - Light Mode (Atelier Lumineux) */
 
     /* App Background: Cream #FAF8F5 */
-    --app: 36 33% 97%;
+    /* App Background: Cream #FAF8F5 -> Slightly Darker #F5F0E6 */
+    --app: 38 30% 93%;
     /* Main Background alias for Shadcn */
     --background: 36 33% 97%;
 

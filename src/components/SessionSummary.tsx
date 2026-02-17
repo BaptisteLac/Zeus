@@ -43,7 +43,7 @@ export default function SessionSummary({
     const stagnations = progressions.filter((p) => p.type === 'stagnation');
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 backdrop-blur-sm p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-6">
             <div className="bg-linen rounded-2xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
                 {/* Header */}
                 <div className="bg-sage text-white px-6 py-5 text-center">
@@ -123,7 +123,7 @@ export default function SessionSummary({
                 <div className="px-6 pb-6">
                     <button
                         onClick={onClose}
-                        className="w-full bg-charcoal text-warm-white rounded-lg py-4 font-sans text-sm font-medium uppercase tracking-wider transition-all hover:bg-charcoal/90 active:scale-[0.98]"
+                        className="w-full bg-brand text-white rounded-lg py-4 font-sans text-sm font-medium uppercase tracking-wider transition-all hover:bg-brand/90 active:scale-[0.98]"
                     >
                         Continuer
                     </button>

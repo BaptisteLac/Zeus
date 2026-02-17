@@ -5,6 +5,7 @@ import { loadState, saveState, resetState, computeBlock, exportData, importData,
 import { calculateProgression } from '@/lib/progression';
 import { getCurrentUser, onAuthStateChange } from '@/lib/cloudStorage';
 import SessionHeader from '@/components/SessionHeader';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import ExerciseCard from '@/components/ExerciseCard';
 import FloatingTimer from '@/components/FloatingTimer';
 import SessionSummary from '@/components/SessionSummary';
@@ -128,7 +129,9 @@ export default function Index() {
             osc.connect(ctx.destination);
             osc.start();
             setTimeout(() => { osc.stop(); ctx.close(); }, 300);
-          } catch { }
+          } catch {
+            // ignore audio context errors
+          }
           return prev ? { ...prev, remaining: 0 } : null;
         }
         return { ...prev, remaining: prev.remaining - 1 };
@@ -197,10 +200,13 @@ export default function Index() {
             if (progression.type === 'increase_charge') {
               toast.success(`📈 Progression ! Prochaine fois : ${progression.nextCharge} kg`);
             } else if (progression.type === 'stagnation') {
-              toast.warning(`⚠️ Stagnation sur ${exercise.name}`);
+              toast.warning(`Stagnation sur ${exercise.name}`);
             }
           }
         }
+
+        // Clear global timer if running
+        setGlobalTimer(null);
 
         return updated;
       });
@@ -213,7 +219,7 @@ export default function Index() {
         setExpandedExerciseId(nextUnsaved.id);
       }
     },
-    [exercises]
+    [exercises, savedExercises]
   );
 
   const handleUpdateExercise = useCallback(
@@ -372,7 +378,7 @@ export default function Index() {
     });
   };
 
-  const handleChangeSession = (session: SessionType) => {
+  const handleChangeSession = useCallback((session: SessionType) => {
     const confirmChange = () => {
       setState((prev) => {
         const updated = { ...prev, currentSession: session };
@@ -401,7 +407,7 @@ export default function Index() {
     }
 
     confirmChange();
-  };
+  }, [savedExercises, exercises]);
 
   const handleExport = () => {
     const data = exportData();
@@ -479,24 +485,26 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background pb-32" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      {/* Auth button */}
-      <button
-        onClick={() => setShowAuthModal(true)}
-        className="fixed top-6 right-6 z-40 transition-all hover:scale-105"
-        title={userEmail ? `Connecté: ${userEmail}` : 'Se connecter'}
-      >
-        {userEmail ? (
-          // Avatar with first letter
-          <div className="w-10 h-10 rounded-full bg-terracotta text-white flex items-center justify-center font-medium text-sm shadow-lg">
-            {userEmail.charAt(0).toUpperCase()}
-          </div>
-        ) : (
-          // "Se Connecter" button
-          <div className="px-4 py-2 bg-background border border-border rounded-full shadow-lg hover:shadow-xl transition-all">
-            <span className="text-xs font-medium uppercase tracking-[0.08em] text-stone">Se Connecter</span>
-          </div>
-        )}
-      </button>
+      <div className="fixed top-6 right-6 z-40 flex items-center gap-2">
+        <ThemeToggle />
+        <button
+          onClick={() => setShowAuthModal(true)}
+          className="transition-all hover:scale-105"
+          title={userEmail ? `Connecté: ${userEmail}` : 'Se connecter'}
+        >
+          {userEmail ? (
+            // Avatar with first letter
+            <div className="w-10 h-10 rounded-full bg-terracotta text-white flex items-center justify-center font-bold text-sm shadow-lg">
+              {userEmail.charAt(0).toUpperCase()}
+            </div>
+          ) : (
+            // "Se Connecter" button
+            <div className="px-4 py-2 bg-background border border-border rounded-full shadow-lg hover:shadow-xl transition-all">
+              <span className="text-xs font-medium uppercase tracking-[0.08em] text-stone">Se Connecter</span>
+            </div>
+          )}
+        </button>
+      </div>
 
       {/* Auth Modal */}
       <AuthModal
@@ -516,6 +524,7 @@ export default function Index() {
           onAdjust={(delta) => setGlobalTimer(prev =>
             prev ? { ...prev, remaining: Math.max(0, prev.remaining + delta), total: Math.max(prev.total, prev.remaining + delta) } : null
           )}
+          onClose={() => setGlobalTimer(null)}
         />
       )}
       <SessionHeader
