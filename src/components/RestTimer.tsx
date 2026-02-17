@@ -72,7 +72,7 @@ export default function RestTimer({ defaultSeconds, onStartTimer }: RestTimerPro
         {!running ? (
           <button
             onClick={start}
-            className="rounded-lg bg-primary px-3 py-1.5 text-[12px] font-medium text-primary-foreground transition-all duration-400 ease-smooth hover:-translate-y-0.5"
+            className="rounded-lg bg-brand px-3 py-1.5 text-[12px] font-medium text-white transition-all duration-400 ease-smooth hover:-translate-y-0.5"
           >
             {defaultSeconds}s
           </button>
@@ -96,7 +96,7 @@ export default function RestTimer({ defaultSeconds, onStartTimer }: RestTimerPro
       {running && (
         <div className="h-0.5 w-full rounded-full bg-border overflow-hidden">
           <div
-            className="h-full bg-primary transition-all duration-1000 ease-linear"
+            className="h-full bg-brand transition-all duration-1000 ease-linear"
             style={{ width: `${progress * 100}%` }}
           />
         </div>

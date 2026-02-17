@@ -135,18 +135,18 @@ export default function ExerciseFormSheet({
     };
 
     const inputClass =
-        'w-full bg-warm-white border border-sand rounded-md focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-all px-4 py-3 font-mono text-base text-charcoal text-center outline-none min-h-[44px]';
-    const labelClass = 'font-sans text-xs uppercase tracking-wider text-stone block mb-2';
+        'w-full bg-surface border border-input rounded-xl focus:border-brand focus:ring-1 focus:ring-brand transition-all px-4 py-3 font-mono text-base text-foreground text-center outline-none min-h-[48px] placeholder:text-muted-foreground/50';
+    const labelClass = 'font-sans text-xs uppercase tracking-wider text-muted-foreground block mb-2';
 
     return (
         <>
             <Sheet open={open} onOpenChange={onOpenChange}>
-                <SheetContent side="bottom" className="bg-linen rounded-t-2xl max-h-[85vh] overflow-y-auto px-6 pb-8">
+                <SheetContent side="bottom" className="bg-background border-t border-white/10 rounded-t-2xl max-h-[85vh] overflow-y-auto px-6 pb-8">
                     <SheetHeader className="text-left mb-6">
-                        <SheetTitle className="font-display text-2xl font-light tracking-tight text-charcoal">
+                        <SheetTitle className="font-display text-2xl font-light tracking-tight text-foreground">
                             {isEditMode ? 'Modifier l\'exercice' : 'Nouvel exercice'}
                         </SheetTitle>
-                        <SheetDescription className="text-stone text-sm">
+                        <SheetDescription className="text-muted-foreground text-sm">
                             {isEditMode
                                 ? 'Modifie les paramètres de cet exercice'
                                 : 'Ajoute un exercice à ta séance'}
@@ -175,7 +175,7 @@ export default function ExerciseFormSheet({
                             {shouldShowSuggestions && (filteredCatalog.length > 0 || !exactMatch) && (
                                 <div
                                     ref={suggestionsRef}
-                                    className="absolute left-0 right-0 top-full mt-1 z-50 bg-warm-white border border-sand rounded-lg shadow-lifted overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200"
+                                    className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface border border-input rounded-xl shadow-lifted overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200"
                                 >
                                     {/* Matching exercises */}
                                     {filteredCatalog.length > 0 && (
@@ -185,15 +185,15 @@ export default function ExerciseFormSheet({
                                                     key={entry.name}
                                                     onMouseDown={(e) => e.preventDefault()}
                                                     onClick={() => handleSelectCatalogEntry(entry)}
-                                                    className="w-full text-left px-4 py-3 hover:bg-sand/30 active:bg-sand/50 transition-colors flex items-center justify-between gap-3 border-b border-sand/40 last:border-b-0"
+                                                    className="w-full text-left px-4 py-3 hover:bg-white/5 active:bg-white/10 transition-colors flex items-center justify-between gap-3 border-b border-white/5 last:border-b-0"
                                                 >
                                                     <div className="flex items-center gap-2.5 min-w-0">
-                                                        <span className="text-terracotta text-sm shrink-0">💪</span>
+                                                        <span className="text-brand text-sm shrink-0">💪</span>
                                                         <div className="min-w-0">
-                                                            <span className="text-charcoal text-sm font-medium block truncate">
+                                                            <span className="text-foreground text-sm font-medium block truncate">
                                                                 {entry.name}
                                                             </span>
-                                                            <span className="text-stone text-[11px]">
+                                                            <span className="text-muted-foreground text-[11px]">
                                                                 {entry.sets}×{entry.repsMin}-{entry.repsMax} · {entry.rest}s
                                                             </span>
                                                         </div>
@@ -202,7 +202,7 @@ export default function ExerciseFormSheet({
                                                         {entry.sessions.map((s) => (
                                                             <span
                                                                 key={s}
-                                                                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sand/60 text-stone text-[10px] font-semibold"
+                                                                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/10 text-muted-foreground text-[10px] font-semibold"
                                                             >
                                                                 {s}
                                                             </span>
@@ -222,14 +222,14 @@ export default function ExerciseFormSheet({
                                             <button
                                                 onMouseDown={(e) => e.preventDefault()}
                                                 onClick={() => setShowSuggestions(false)}
-                                                className="w-full text-left px-4 py-3 hover:bg-terracotta/5 active:bg-terracotta/10 transition-colors flex items-center gap-2.5"
+                                                className="w-full text-left px-4 py-3 hover:bg-brand/10 active:bg-brand/20 transition-colors flex items-center gap-2.5"
                                             >
-                                                <span className="w-5 h-5 rounded-full bg-terracotta/10 flex items-center justify-center shrink-0">
-                                                    <svg className="w-3 h-3 text-terracotta" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                <span className="w-5 h-5 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                                                    <svg className="w-3 h-3 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                                     </svg>
                                                 </span>
-                                                <span className="text-terracotta text-sm font-medium">
+                                                <span className="text-brand text-sm font-medium">
                                                     Créer « {name.trim()} »
                                                 </span>
                                             </button>
@@ -303,9 +303,9 @@ export default function ExerciseFormSheet({
                                     <button
                                         key={value}
                                         onClick={() => setRir(value)}
-                                        className={`flex-1 rounded-md py-3 font-mono text-sm font-medium transition-all duration-300 ${rir === value
-                                            ? 'bg-terracotta text-warm-white shadow-sm'
-                                            : 'bg-warm-white border border-sand text-stone hover:border-terracotta'
+                                        className={`flex-1 rounded-lg py-3 font-mono text-sm font-medium transition-all duration-300 ${rir === value
+                                            ? 'bg-brand text-white shadow-sm'
+                                            : 'bg-surface border border-input text-muted-foreground hover:bg-surface/80 hover:text-foreground'
                                             }`}
                                     >
                                         {value}
@@ -318,9 +318,9 @@ export default function ExerciseFormSheet({
                         <button
                             onClick={handleSubmit}
                             disabled={!canSubmit}
-                            className={`w-full rounded-md transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4 mt-2 ${canSubmit
-                                ? 'bg-charcoal hover:bg-black text-warm-white'
-                                : 'bg-stone/20 text-stone cursor-not-allowed'
+                            className={`w-full rounded-full transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4 mt-2 ${canSubmit
+                                ? 'bg-brand hover:bg-brand/90 text-white'
+                                : 'bg-surface border border-white/5 text-muted-foreground cursor-not-allowed'
                                 }`}
                         >
                             {isEditMode ? 'Enregistrer les modifications' : 'Ajouter l\'exercice'}

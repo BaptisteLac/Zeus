@@ -190,8 +190,7 @@ export default function Index() {
         // Show toast and check for progression
         const exercise = exercises.find(ex => ex.id === exerciseId);
         if (exercise) {
-          toast.success(`${exercise.name} enregistré ✓`);
-
+          // Check progression with new history
           // Check progression with new history
           const progression = calculateProgression(exercise, history);
           if (progression) {

@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 export default {
-  darkMode: ["class"],
+  darkMode: "class",
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Cormorant Garamond', 'serif'],
+        display: ['Clash Display', 'sans-serif'],
         sans: ['Inter', 'sans-serif'],
         mono: ['IBM Plex Mono', 'monospace'],
       },
@@ -24,24 +24,28 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        cream: "hsl(var(--cream))",
-        linen: "hsl(var(--linen))",
-        sand: "hsl(var(--sand))",
-        "warm-white": "hsl(var(--warm-white))",
-        charcoal: "hsl(var(--charcoal))",
-        graphite: "hsl(var(--graphite))",
-        stone: "hsl(var(--stone))",
-        terracotta: "hsl(var(--terracotta))",
+
+        // Muscle Buddy Semantic Palette
+        app: "hsl(var(--app))",
+        surface: "hsl(var(--surface))",
+        "input-surface": "hsl(var(--input-surface))",
+
+        // Semantic Text Colors
+        primary: { // Re-mapped to text-primary
+          DEFAULT: "hsl(var(--foreground))",
+          foreground: "hsl(var(--background))",
+        },
+        secondary: { // Re-mapped to text-secondary
+          DEFAULT: "hsl(var(--secondary-foreground))",
+          foreground: "hsl(var(--background))",
+        },
+
+        // Brand & Status Colors
+        brand: "hsl(var(--brand))",
         sage: "hsl(var(--sage))",
-        gold: "hsl(var(--gold))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
+        brick: "hsl(var(--brick))",
+
+        // Legacy/Direct mappings if needed
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
@@ -62,32 +66,19 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(var(--success-foreground))",
-        },
-        warning: {
-          DEFAULT: "hsl(var(--warning))",
-          foreground: "hsl(var(--warning-foreground))",
-        },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
-        },
+
+        // Keep these for backward compatibility if code uses them specifically
+        ivory: "hsl(var(--ivory))",
+        taupe: "hsl(var(--taupe))",
+        stone: "hsl(var(--stone))",
       },
       borderRadius: {
-        lg: "8px",
-        md: "6px",
-        sm: "4px",
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        soft: "0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)",
+        soft: "0 4px 24px rgba(35, 34, 32, 0.06)", // Designed for Light Mode
         lifted: "0 2px 8px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.08)",
       },
       transitionTimingFunction: {

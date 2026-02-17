@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X, Minus, Plus, SkipForward } from "lucide-react";
 
 interface FloatingTimerProps {
     remaining: number;
@@ -15,26 +15,26 @@ export default function FloatingTimer({ remaining, total, onSkip, onAdjust }: Fl
     const progress = Math.min(100, Math.max(0, (remaining / total) * 100));
 
     // SVG params
-    const radius = 18;
+    const radius = 20;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-    if (remaining < 0) return null;
+    if (remaining <= 0) return null;
 
     return (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-charcoal text-warm-white rounded-full shadow-2xl flex items-center p-2 pr-6 gap-4 z-50 border border-stone/30 backdrop-blur-md animate-slide-down">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-app/90 backdrop-blur-md rounded-full border border-input shadow-2xl flex items-center p-1.5 gap-4 z-50 animate-slide-down pr-6 ring-1 ring-white/5">
             {/* Circular Progress + Time */}
-            <div className="relative w-12 h-12 flex items-center justify-center">
+            <div className="relative w-14 h-14 flex items-center justify-center bg-surface/50 rounded-full border border-white/5">
                 {/* Background track */}
-                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 44 44">
+                <svg className="absolute inset-0 w-full h-full -rotate-90 p-1" viewBox="0 0 44 44">
                     <circle
                         cx="22" cy="22" r={radius}
-                        className="stroke-stone/30 fill-none"
+                        className="stroke-input fill-none"
                         strokeWidth="3"
                     />
                     <circle
                         cx="22" cy="22" r={radius}
-                        className="stroke-terracotta fill-none transition-all duration-1000 ease-linear"
+                        className="stroke-brand fill-none transition-all duration-1000 ease-linear"
                         strokeWidth="3"
                         strokeDasharray={circumference}
                         strokeDashoffset={strokeDashoffset}
@@ -42,7 +42,7 @@ export default function FloatingTimer({ remaining, total, onSkip, onAdjust }: Fl
                     />
                 </svg>
                 <div className="relative z-10 flex flex-col items-center justify-center leading-none">
-                    <span className="font-mono text-xs font-bold tabular-nums tracking-tighter">
+                    <span className="font-mono text-sm font-bold text-primary tabular-nums tracking-tighter">
                         {mins}:{String(secs).padStart(2, '0')}
                     </span>
                 </div>
@@ -53,29 +53,30 @@ export default function FloatingTimer({ remaining, total, onSkip, onAdjust }: Fl
                 {onAdjust && (
                     <button
                         onClick={() => onAdjust(-15)}
-                        className="w-10 h-10 flex items-center justify-center font-mono text-xs text-stone hover:text-warm-white active:scale-90 transition-all rounded-full hover:bg-white/5 touch-manipulation"
+                        className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-primary active:scale-90 transition-all rounded-full hover:bg-surface"
                     >
-                        -15
+                        <span className="font-mono text-xs font-medium">-15</span>
                     </button>
                 )}
+
+                <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
 
                 {onAdjust && (
                     <button
                         onClick={() => onAdjust(15)}
-                        className="w-10 h-10 flex items-center justify-center font-mono text-xs text-stone hover:text-warm-white active:scale-90 transition-all rounded-full hover:bg-white/5 touch-manipulation"
+                        className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-primary active:scale-90 transition-all rounded-full hover:bg-surface"
                     >
-                        +15
+                        <span className="font-mono text-xs font-medium">+15</span>
                     </button>
                 )}
             </div>
 
-            <div className="w-[1px] h-6 bg-stone/40 mx-2"></div>
-
             <button
                 onClick={onSkip}
-                className="font-sans text-xs uppercase tracking-wider font-medium text-stone hover:text-warm-white transition-colors"
+                className="ml-2 flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface hover:bg-surface/80 text-primary transition-all active:scale-95 group border border-white/5"
             >
-                PASSER
+                <SkipForward className="w-4 h-4 text-brand" />
+                <span className="font-sans text-[10px] uppercase tracking-widest font-semibold text-muted-foreground group-hover:text-primary">Skip</span>
             </button>
         </div>
     );

@@ -14,6 +14,7 @@ interface SessionHeaderProps {
 }
 
 import { ChevronDown, RotateCcw } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 const sessionLabels: Record<SessionType, string> = {
   A: 'Séance A',
@@ -58,6 +59,7 @@ export default function SessionHeader({
             {formatDate()}
           </p>
         </div>
+        <ThemeToggle />
       </div>
 
       <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

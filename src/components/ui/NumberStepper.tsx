@@ -58,20 +58,20 @@ export function NumberStepper({
             )}
             <div
                 className={cn(
-                    "flex items-center bg-warm-white border rounded-lg transition-all min-h-[52px]",
-                    isFocused ? "border-terracotta ring-1 ring-terracotta" : "border-sand"
+                    "flex items-center bg-input border rounded-xl transition-all h-12",
+                    isFocused ? "border-brand ring-1 ring-brand" : "border-input"
                 )}
             >
                 <button
                     type="button"
                     onClick={handleDecrement}
-                    className="w-12 h-full flex items-center justify-center text-stone hover:text-charcoal active:scale-90 transition-transform touch-manipulation"
+                    className="w-12 h-full flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-transform touch-manipulation"
                     disabled={value <= min}
                 >
                     <Minus className="w-5 h-5" />
                 </button>
 
-                <div className="flex-1 text-center font-mono text-xl text-charcoal flex items-center justify-center relative border-x border-sand/10 h-[30px]">
+                <div className="flex-1 text-center font-mono text-xl text-foreground flex items-center justify-center relative border-x border-white/5 h-[30px]">
                     <input
                         ref={inputRef}
                         type="number"
@@ -91,12 +91,12 @@ export function NumberStepper({
                 <button
                     type="button"
                     onClick={handleIncrement}
-                    className="w-12 h-full flex items-center justify-center text-stone hover:text-charcoal active:scale-90 transition-transform touch-manipulation"
+                    className="w-12 h-full flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-transform touch-manipulation"
                     disabled={value >= max}
                 >
                     <Plus className="w-5 h-5" />
                 </button>
             </div>
-        </div>
+        </div >
     );
 }

@@ -99,7 +99,10 @@ export default function ExerciseCard({
 
   // Set Stepper state
   const [activeSetIndex, setActiveSetIndex] = useState(0);
-  const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
+  const [completedSets, setCompletedSets] = useState<Set<number>>(() => {
+    if (saved) return new Set(Array.from({ length: exercise.sets }, (_, i) => i));
+    return new Set();
+  });
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const totalReps = sets.reduce((a, b) => a + b, 0);
@@ -258,7 +261,7 @@ export default function ExerciseCard({
     if (sets[activeSetIndex] > 0) {
       return {
         label: `Valider S${activeSetIndex + 1} & Repos ⏱`,
-        style: 'bg-charcoal hover:bg-black text-warm-white',
+        style: 'bg-brand hover:bg-brand/90 text-white shadow-lg shadow-brand/20',
         disabled: false,
       };
     }
@@ -277,9 +280,9 @@ export default function ExerciseCard({
 
   const chipStyles = {
     active:
-      'border-2 border-terracotta ring-2 ring-terracotta/20 bg-warm-white',
-    done: 'border border-sage/40 bg-sage/10',
-    pending: 'border border-sand bg-warm-white',
+      'border border-brand ring-1 ring-brand bg-input text-brand',
+    done: 'border border-sage/40 bg-sage/10 text-sage',
+    pending: 'border border-transparent bg-input text-muted-foreground',
   };
 
   const labelStyles = {
@@ -289,9 +292,9 @@ export default function ExerciseCard({
   };
 
   const getStatusStyles = () => {
-    if (saved) return "border-l-4 border-l-sage bg-sage/5 opacity-80";
-    if (isExpanded) return "border-l-4 border-l-terracotta bg-white shadow-md my-4";
-    return "border-l-4 border-l-transparent bg-linen/50 hover:bg-linen hover:border-l-sand/30 mb-3";
+    if (saved) return "bg-surface/50 border-t border-white/5 opacity-60";
+    if (isExpanded) return "bg-surface border-t border-white/10 my-4 shadow-none";
+    return "bg-surface/30 border-t border-white/5 hover:bg-surface/50 mb-3";
   };
 
   const statusBadge = saved ? (
@@ -313,7 +316,7 @@ export default function ExerciseCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden transition-all duration-500 ease-out border border-white/20 rounded-xl",
+        "relative overflow-hidden transition-all duration-500 ease-smooth rounded-2xl",
         getStatusStyles()
       )}
     >
@@ -327,17 +330,17 @@ export default function ExerciseCard({
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1 min-w-0" onClick={() => isExpanded && onToggle?.()}>
             <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between w-full">
+              <div className="flex items-start justify-between w-full">
                 <h3 className={cn(
-                  "font-display text-lg leading-tight truncate pr-2 transition-colors duration-300",
-                  isExpanded ? "text-charcoal font-semibold" : "text-stone"
+                  "font-display uppercase tracking-wide text-lg leading-tight pr-2 transition-colors duration-300",
+                  isExpanded ? "text-primary font-semibold" : "text-foreground font-medium"
                 )}>
                   {exercise.name}
                 </h3>
                 <ChevronDown
                   className={cn(
-                    "w-5 h-5 text-sand transition-transform duration-500 ease-out flex-shrink-0",
-                    isExpanded ? "rotate-180 text-terracotta" : ""
+                    "w-5 h-5 text-muted-foreground transition-transform duration-500 ease-smooth flex-shrink-0",
+                    isExpanded ? "rotate-180 text-brand" : ""
                   )}
                 />
               </div>
@@ -389,27 +392,27 @@ export default function ExerciseCard({
 
           {/* Objectif du Jour */}
           {progression && (
-            <div className="bg-terracotta/10 border-l-4 border-terracotta p-4 mb-6 rounded-r-md flex items-center gap-3">
+            <div className="bg-brand/10 border-l-4 border-brand p-4 mb-6 rounded-r-xl flex items-start gap-3">
               <span className="text-xl">
                 {progression.type === 'increase_charge' ? '🏆' : progression.type === 'stagnation' ? '⚡' : '📈'}
               </span>
               <div>
                 {progression.type === 'increase_charge' && (
                   <>
-                    <p className="font-sans font-medium text-charcoal">Objectif : {progression.nextCharge} kg</p>
-                    <p className="font-sans text-sm text-graphite">Battre {progression.targetTotalReps} reps au total</p>
+                    <p className="font-sans font-medium text-primary">Objectif : {progression.nextCharge} kg</p>
+                    <p className="font-sans text-sm text-secondary">Battre {progression.targetTotalReps} reps au total</p>
                   </>
                 )}
                 {progression.type === 'stagnation' && (
                   <>
-                    <p className="font-sans font-medium text-charcoal">Stagnation détectée</p>
-                    <p className="font-sans text-sm text-graphite">Réduis le volume ou deload</p>
+                    <p className="font-sans font-medium text-primary">Stagnation détectée</p>
+                    <p className="font-sans text-sm text-secondary">Réduis le volume ou deload</p>
                   </>
                 )}
                 {progression.type === 'increase_reps' && (
                   <>
-                    <p className="font-sans font-medium text-charcoal">Objectif : {progression.nextCharge} kg</p>
-                    <p className="font-sans text-sm text-graphite">Battre {progression.targetTotalReps} reps au total</p>
+                    <p className="font-sans font-medium text-primary">Objectif : {progression.nextCharge} kg</p>
+                    <p className="font-sans text-sm text-secondary">Battre {progression.targetTotalReps} reps au total</p>
                   </>
                 )}
               </div>
@@ -428,31 +431,33 @@ export default function ExerciseCard({
             {/* Ligne 1: Charge et RIR */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="font-sans text-xs uppercase tracking-wider text-stone block mb-2 text-center">
+                <label className="font-sans text-xs uppercase tracking-wider text-muted-foreground block mb-2 text-center">
                   Charge (kg)
                 </label>
-                <NumberStepper
-                  value={charge}
-                  onChange={setCharge}
-                  step={0.5}
-                  min={0}
-                  max={500}
-                />
+                <div className="bg-input rounded-xl p-1">
+                  <NumberStepper
+                    value={charge}
+                    onChange={setCharge}
+                    step={0.5}
+                    min={0}
+                    max={500}
+                  />
+                </div>
               </div>
               <div>
-                <label className="font-sans text-xs uppercase tracking-wider text-stone block mb-2 text-center">
+                <label className="font-sans text-xs uppercase tracking-wider text-muted-foreground block mb-2 text-center">
                   RIR Senti
                 </label>
-                <div className="flex items-center justify-between bg-warm-white border border-sand rounded-lg p-1 h-[52px]">
+                <div className="flex items-center justify-between bg-input rounded-xl p-1 h-12">
                   {[0, 1, 2, 3].map((val) => (
                     <button
                       key={val}
                       onClick={() => setRir(val)}
                       className={cn(
-                        "flex-1 h-full rounded-md text-sm font-mono transition-all",
+                        "flex-1 h-full rounded-lg text-sm font-mono transition-all",
                         rir === val
-                          ? "bg-terracotta text-white shadow-sm font-medium"
-                          : "text-stone hover:bg-sand/20"
+                          ? "bg-brand text-white shadow-sm font-medium"
+                          : "text-muted-foreground hover:bg-surface"
                       )}
                     >
                       {val}
@@ -461,10 +466,10 @@ export default function ExerciseCard({
                   <button
                     onClick={() => setRir(4)}
                     className={cn(
-                      "flex-1 h-full rounded-md text-sm font-mono transition-all",
+                      "flex-1 h-full rounded-lg text-sm font-mono transition-all",
                       rir >= 4
-                        ? "bg-terracotta text-white shadow-sm font-medium"
-                        : "text-stone hover:bg-sand/20"
+                        ? "bg-brand text-white shadow-sm font-medium"
+                        : "text-muted-foreground hover:bg-surface"
                     )}
                   >
                     4+
@@ -476,30 +481,30 @@ export default function ExerciseCard({
             {/* Set Chips */}
             <div>
               <div className="flex justify-between items-baseline mb-3">
-                <label className="font-sans text-xs uppercase tracking-wider text-stone">
+                <label className="font-sans text-xs uppercase tracking-wider text-muted-foreground">
                   Séries
                 </label>
-                <span className="font-sans text-xs text-graphite font-medium">
-                  Total: <span className="font-mono text-terracotta">{totalReps}</span>
+                <span className="font-sans text-xs text-secondary font-medium">
+                  Total: <span className="font-mono text-brand">{totalReps}</span>
                 </span>
               </div>
 
-              <div className="flex flex-row gap-2">
+              <div className="flex flex-wrap gap-2">
                 {sets.map((val, i) => {
                   const state = getChipState(i);
                   return (
-                    <div key={i} className="flex flex-col items-center gap-1.5 flex-1 min-w-[60px]">
+                    <div key={i} className="flex flex-col items-center gap-1.5 flex-1 min-w-[70px]">
                       {/* Set label */}
                       <span className={cn(
                         "text-[10px] uppercase tracking-widest font-sans",
-                        labelStyles[state]
+                        state === 'active' ? 'text-brand font-semibold' : 'text-muted-foreground'
                       )}>
                         {state === 'done' ? '✓' : `S${i + 1}`}
                       </span>
 
                       {/* Input chip */}
                       <div className={cn(
-                        "relative w-full rounded-lg transition-all duration-300",
+                        "relative w-full rounded-xl transition-all duration-300",
                         chipStyles[state]
                       )}>
                         <input
@@ -511,8 +516,8 @@ export default function ExerciseCard({
                           onChange={(e) => handleSetChange(i, e.target.value)}
                           onFocus={() => handleChipFocus(i)}
                           className={cn(
-                            "w-full bg-transparent rounded-lg px-2 py-3 font-mono text-lg text-center outline-none min-h-[48px] transition-colors",
-                            state === 'done' ? 'text-sage font-semibold' : 'text-charcoal'
+                            "w-full bg-transparent rounded-xl px-1 py-3 font-mono text-lg text-center outline-none min-h-[48px] transition-colors",
+                            state === 'done' ? 'text-sage font-semibold' : 'text-primary'
                           )}
                           placeholder="-"
                         />
@@ -524,7 +529,7 @@ export default function ExerciseCard({
 
               {/* Progress bar */}
               <div className="mt-4 flex items-center gap-3">
-                <div className="flex-1 h-1.5 rounded-full bg-sand/60 overflow-hidden">
+                <div className="flex-1 h-1.5 rounded-full bg-input overflow-hidden">
                   <div
                     className="h-full rounded-full bg-sage transition-all duration-500 ease-out"
                     style={{
@@ -544,8 +549,9 @@ export default function ExerciseCard({
             onClick={handleValidateAndSave}
             disabled={buttonConfig.disabled}
             className={cn(
-              "w-full mt-6 rounded-md transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4",
-              buttonConfig.style
+              "w-full mt-6 rounded-full transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4 min-h-[48px]",
+              buttonConfig.label.includes('Valider') ? 'bg-brand text-white hover:bg-brand/90' :
+                buttonConfig.style.replace('bg-charcoal', 'bg-surface border border-white/10').replace('rounded-md', 'rounded-full')
             )}
           >
             {buttonConfig.label}
