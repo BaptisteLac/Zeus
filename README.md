@@ -31,8 +31,13 @@ Zeus is a premium, high-performance Progressive Web App (PWA) designed for serio
    ```bash
    npm install
    ```
+3. Setup environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Add your Supabase URL and Anon Key (Publishable Key) to the `.env` file.
 
-3. Start the development server:
+4. Start the development server:
    ```bash
    npm run dev
    ```
