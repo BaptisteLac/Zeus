@@ -19,21 +19,16 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Iron Progress',
-        short_name: 'IronProg',
+        name: 'Muscle Buddy',
+        short_name: 'MB',
         description: 'Suivi d\'entraînement musculation avec double progression',
         theme_color: '#faf8f5',
         background_color: '#faf8f5',
         display: 'standalone',
         icons: [
           {
-            src: '/icons/icon-192.png',
+            src: '/icons/icon-mb.png',
             sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/icons/icon-512.png',
-            sizes: '512x512',
             type: 'image/png',
           },
         ],
