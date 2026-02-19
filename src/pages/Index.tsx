@@ -508,13 +508,13 @@ export default function Index() {
       )}
       <SessionHeader
         session={state.currentSession}
-        block={state.currentBlock}
-        week={state.weekNumber}
-        blockChanged={blockChanged}
+        // block={state.currentBlock}    // TODO: à réactiver
+        // week={state.weekNumber}       // TODO: à réactiver
+        // blockChanged={blockChanged}   // TODO: à réactiver
         completedCount={savedExercises.size}
         totalCount={exercises.length}
-        onReset={handleReset}
-        onChangeBlock={handleChangeBlock}
+        // onReset={handleReset}         // TODO: à réactiver
+        // onChangeBlock={handleChangeBlock} // TODO: à réactiver
         onChangeSession={handleChangeSession}
         hidden={headerHidden}
       />

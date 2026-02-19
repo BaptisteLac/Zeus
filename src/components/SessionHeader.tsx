@@ -4,13 +4,13 @@ import { cn } from '@/lib/utils';
 
 interface SessionHeaderProps {
   session: SessionType;
-  block: 1 | 2 | 3;
-  week: number;
-  blockChanged: boolean;
+  // block: 1 | 2 | 3;   // TODO: à réactiver
+  // week: number;        // TODO: à réactiver
+  // blockChanged: boolean; // TODO: à réactiver
   completedCount: number;
   totalCount: number;
-  onReset: () => void;
-  onChangeBlock: (block: 1 | 2 | 3) => void;
+  // onReset: () => void;          // TODO: à réactiver
+  // onChangeBlock: (block: 1 | 2 | 3) => void; // TODO: à réactiver
   onChangeSession: (session: SessionType) => void;
   hidden?: boolean;
 }
@@ -34,13 +34,13 @@ function formatDate() {
 
 export default function SessionHeader({
   session,
-  block,
-  week,
-  blockChanged,
+  // block,        // TODO: à réactiver
+  // week,         // TODO: à réactiver
+  // blockChanged, // TODO: à réactiver
   completedCount,
   totalCount,
-  onReset,
-  onChangeBlock,
+  // onReset,      // TODO: à réactiver
+  // onChangeBlock, // TODO: à réactiver
   onChangeSession,
   hidden = false,
 }: SessionHeaderProps) {
@@ -50,11 +50,13 @@ export default function SessionHeader({
       "sticky top-0 z-30 bg-background px-6 pt-6 pb-4 transition-transform duration-300 ease-in-out",
       hidden && "-translate-y-full"
     )}>
+      {/* TODO: à réactiver — notification de changement de bloc
       {blockChanged && (
         <div className="mb-4 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2.5 text-center text-sm font-medium text-foreground">
           Tu passes en Bloc {block} — les paramètres ont été ajustés.
         </div>
       )}
+      */}
 
       <div className="flex items-start justify-between pr-28">
         <div>
@@ -71,14 +73,15 @@ export default function SessionHeader({
       <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <SessionSelector currentSession={session} onChange={onChangeSession} />
 
+        {/* TODO: à réactiver si besoin
         <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
-          {/* Week Badge */}
+          {/* Week Badge *\/}
           <div className="flex items-center whitespace-nowrap rounded-md border border-border px-3 py-1.5 bg-background">
             <span className="text-[10px] font-sans font-medium uppercase tracking-wider text-stone/70 mr-1.5">Semaine</span>
             <span className="text-xs font-mono font-medium text-foreground">{week}</span>
           </div>
 
-          {/* Block Select */}
+          {/* Block Select *\/}
           <div className="relative group flex-1 sm:flex-none">
             <select
               value={block}
@@ -92,7 +95,7 @@ export default function SessionHeader({
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-stone pointer-events-none group-hover:text-foreground transition-colors" />
           </div>
 
-          {/* Reset Button */}
+          {/* Reset Button *\/}
           <button
             onClick={onReset}
             className="ml-auto sm:ml-2 p-2 rounded-md hover:bg-stone/5 text-stone/60 hover:text-destructive transition-colors"
@@ -101,6 +104,7 @@ export default function SessionHeader({
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
         </div>
+        */}
       </div>
 
       {/* Session progress bar */}
