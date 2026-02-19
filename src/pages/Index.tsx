@@ -48,6 +48,8 @@ export default function Index() {
   // CRUD state
   const [showExerciseForm, setShowExerciseForm] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | undefined>(undefined);
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
 
   const [alertConfig, setAlertConfig] = useState<{
     isOpen: boolean;
@@ -150,6 +152,22 @@ export default function Index() {
       return () => clearTimeout(t);
     }
   }, [blockChanged]);
+
+  // Hide header on scroll down, reveal on scroll up
+  useEffect(() => {
+    const SCROLL_THRESHOLD = 60;
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY < SCROLL_THRESHOLD) {
+        setHeaderHidden(false);
+      } else {
+        setHeaderHidden(currentY > lastScrollYRef.current);
+      }
+      lastScrollYRef.current = currentY;
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const exercises = useMemo(
     () => getExercisesForSession(state.currentSession, state.currentBlock, state.customExercises),
@@ -537,6 +555,7 @@ export default function Index() {
         onReset={handleReset}
         onChangeBlock={handleChangeBlock}
         onChangeSession={handleChangeSession}
+        hidden={headerHidden}
       />
 
       <input
@@ -566,6 +585,7 @@ export default function Index() {
             onToggle={() => setExpandedExerciseId(
               expandedExerciseId === exercise.id ? null : exercise.id
             )}
+            onDelete={() => handleDeleteExercise(exercise.id)}
           />
         ))}
 

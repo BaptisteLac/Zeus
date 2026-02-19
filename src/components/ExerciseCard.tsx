@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Exercise, WorkoutEntry, ExerciseInput } from '@/lib/types';
 import { calculateProgression } from '@/lib/progression';
-import { Check, ChevronDown, Dumbbell, MoreVertical, RotateCw, Trash2, History } from "lucide-react";
+import { Check, ChevronDown, Dumbbell, MoreVertical, RotateCw, Trash2, History, Pencil } from "lucide-react";
+import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import { NumberStepper } from './ui/NumberStepper';
 
@@ -16,6 +18,7 @@ interface ExerciseCardProps {
   saved: boolean;
   isExpanded?: boolean;
   onToggle?: () => void;
+  onDelete?: () => void;
 }
 
 export default function ExerciseCard({
@@ -29,6 +32,7 @@ export default function ExerciseCard({
   saved,
   isExpanded = true,
   onToggle,
+  onDelete,
 }: ExerciseCardProps) {
   // Long-press detection (supports both touch and mouse)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -96,6 +100,7 @@ export default function ExerciseCard({
   const [rir, setRir] = useState(lastEntry ? lastEntry.rir : 1);
   const [modified, setModified] = useState(false);
   const [savedValues, setSavedValues] = useState<ExerciseInput | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Set Stepper state
   const [activeSetIndex, setActiveSetIndex] = useState(0);
@@ -104,6 +109,16 @@ export default function ExerciseCard({
     return new Set();
   });
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Scroll card into view when expanded
+  useEffect(() => {
+    if (!isExpanded || !cardRef.current) return;
+    const timer = setTimeout(() => {
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [isExpanded]);
 
   const totalReps = sets.reduce((a, b) => a + b, 0);
   const filledSetsCount = sets.filter((s) => s > 0).length;
@@ -315,6 +330,8 @@ export default function ExerciseCard({
 
   return (
     <div
+      ref={cardRef}
+      style={{ scrollMarginTop: '220px' }}
       className={cn(
         "relative overflow-hidden transition-all duration-500 ease-smooth rounded-2xl",
         getStatusStyles()
@@ -337,12 +354,78 @@ export default function ExerciseCard({
                 )}>
                   {exercise.name}
                 </h3>
-                <ChevronDown
-                  className={cn(
-                    "w-5 h-5 text-muted-foreground transition-transform duration-500 ease-smooth flex-shrink-0",
-                    isExpanded ? "rotate-180 text-brand" : ""
-                  )}
-                />
+                {isExpanded ? (
+                  <div className="flex items-center gap-2">
+                    {/* More Options Drawer Trigger */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Drawer>
+                        <DrawerTrigger asChild>
+                          <button
+                            className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-surface hover:text-foreground transition-colors"
+                          >
+                            <MoreVertical className="w-5 h-5" />
+                          </button>
+                        </DrawerTrigger>
+                        <DrawerContent className="bg-background border-t border-white/10 px-6 pb-8">
+                          <DrawerHeader className="text-left px-0 pt-6 pb-4">
+                            <DrawerTitle className="font-display text-2xl font-light tracking-tight">
+                              {exercise.name}
+                            </DrawerTitle>
+                            <DrawerDescription>
+                              Gère cet exercice
+                            </DrawerDescription>
+                          </DrawerHeader>
+                          <div className="flex flex-col gap-3">
+                            <button
+                              onClick={() => {
+                                onEditDefinition?.();
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-4 bg-surface rounded-xl border border-white/5 hover:bg-white/5 active:scale-[0.98] transition-all"
+                            >
+                              <span className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center text-brand">
+                                <Pencil className="w-4 h-4" />
+                              </span>
+                              <span className="font-medium">Modifier l'exercice</span>
+                            </button>
+
+                            {onDelete && (
+                              <button
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="w-full flex items-center gap-3 px-4 py-4 bg-destructive/5 rounded-xl border border-destructive/10 hover:bg-destructive/10 active:scale-[0.98] transition-all text-destructive"
+                              >
+                                <span className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
+                                  <Trash2 className="w-4 h-4" />
+                                </span>
+                                <span className="font-medium">Supprimer l'exercice</span>
+                              </button>
+                            )}
+                          </div>
+                          <DrawerFooter className="px-0 pt-4">
+                            <DrawerClose asChild>
+                              <button className="w-full py-4 text-center font-medium text-muted-foreground hover:text-foreground">
+                                Annuler
+                              </button>
+                            </DrawerClose>
+                          </DrawerFooter>
+                        </DrawerContent>
+                      </Drawer>
+                    </div>
+
+                    <ChevronDown
+                      className={cn(
+                        "w-5 h-5 text-muted-foreground transition-transform duration-500 ease-smooth flex-shrink-0",
+                        isExpanded ? "rotate-180 text-brand" : ""
+                      )}
+                    />
+                  </div>
+                ) : (
+                  <ChevronDown
+                    className={cn(
+                      "w-5 h-5 text-muted-foreground transition-transform duration-500 ease-smooth flex-shrink-0",
+                      isExpanded ? "rotate-180 text-brand" : ""
+                    )}
+                  />
+                )}
               </div>
 
               <div className="flex items-center justify-between">
@@ -509,7 +592,12 @@ export default function ExerciseCard({
                           pattern="[0-9]*"
                           value={val || ''}
                           onChange={(e) => handleSetChange(i, e.target.value)}
-                          onFocus={() => handleChipFocus(i)}
+                          onFocus={() => {
+                            handleChipFocus(i);
+                            setTimeout(() => {
+                              inputRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }, 300);
+                          }}
                           className={cn(
                             "w-full bg-transparent rounded-xl px-1 py-3 font-mono text-lg text-center outline-none min-h-[48px] transition-colors",
                             state === 'done' ? 'text-sage font-semibold' : 'text-primary'
@@ -553,6 +641,34 @@ export default function ExerciseCard({
           </button>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="bg-linen border-sand max-w-sm mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-xl text-charcoal">
+              Supprimer {exercise.name} ?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-stone">
+              L'exercice sera retiré de ta séance. L'historique de performances sera conservé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="bg-warm-white border-sand text-stone hover:bg-sand/30">
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onDelete?.();
+                setShowDeleteConfirm(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

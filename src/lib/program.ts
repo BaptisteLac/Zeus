@@ -21,11 +21,11 @@ const sessionB: Exercise[] = [
 ];
 
 const sessionC: Exercise[] = [
-  { id: 'c1', name: 'Développé couché machine', sets: 3, repsMin: 8, repsMax: 12, rest: 90, rir: '1' },
+  { id: 'c1', name: 'Développé couché machine', sets: 4, repsMin: 6, repsMax: 10, rest: 90, rir: '1' },
   { id: 'c2', name: 'Pec Deck', sets: 3, repsMin: 12, repsMax: 20, rest: 60, rir: '1' },
-  { id: 'c3', name: 'Élévations latérales poulie', sets: 4, repsMin: 15, repsMax: 20, rest: 50, rir: '1' },
+  { id: 'c3', name: 'Élévations latérales poulie', sets: 3, repsMin: 15, repsMax: 20, rest: 50, rir: '1' },
   { id: 'c4', name: 'Dips assistés', sets: 3, repsMin: 8, repsMax: 12, rest: 90, rir: '1' },
-  { id: 'c5', name: 'Extension triceps corde', sets: 2, repsMin: 12, repsMax: 15, rest: 60, rir: '1' },
+  { id: 'c5', name: 'Extension triceps corde', sets: 3, repsMin: 12, repsMax: 15, rest: 60, rir: '1' },
   { id: 'c6', name: 'Curl EZ barre', sets: 3, repsMin: 10, repsMax: 15, rest: 60, rir: '1' },
   { id: 'c7', name: 'Leg curl extension', sets: 3, repsMin: 12, repsMax: 15, rest: 60, rir: '1' },
 ];

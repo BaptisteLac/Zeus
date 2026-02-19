@@ -1,5 +1,6 @@
 import { SessionType } from '@/lib/types';
 import SessionSelector from './SessionSelector';
+import { cn } from '@/lib/utils';
 
 interface SessionHeaderProps {
   session: SessionType;
@@ -11,6 +12,7 @@ interface SessionHeaderProps {
   onReset: () => void;
   onChangeBlock: (block: 1 | 2 | 3) => void;
   onChangeSession: (session: SessionType) => void;
+  hidden?: boolean;
 }
 
 import { ChevronDown, RotateCcw } from 'lucide-react';
@@ -40,17 +42,21 @@ export default function SessionHeader({
   onReset,
   onChangeBlock,
   onChangeSession,
+  hidden = false,
 }: SessionHeaderProps) {
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
   return (
-    <div className="sticky top-0 z-30 bg-background px-6 pt-6 pb-4">
+    <div className={cn(
+      "sticky top-0 z-30 bg-background px-6 pt-6 pb-4 transition-transform duration-300 ease-in-out",
+      hidden && "-translate-y-full"
+    )}>
       {blockChanged && (
         <div className="mb-4 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2.5 text-center text-sm font-medium text-foreground">
           Tu passes en Bloc {block} — les paramètres ont été ajustés.
         </div>
       )}
 
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between pr-28">
         <div>
           <h1 className="font-display text-4xl font-light tracking-tight text-foreground">
             {sessionLabels[session]}

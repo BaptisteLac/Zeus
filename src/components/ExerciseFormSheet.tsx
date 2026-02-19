@@ -141,7 +141,7 @@ export default function ExerciseFormSheet({
     return (
         <>
             <Sheet open={open} onOpenChange={onOpenChange}>
-                <SheetContent side="bottom" className="bg-background border-t border-white/10 rounded-t-2xl max-h-[85vh] overflow-y-auto px-6 pb-8">
+                <SheetContent side="bottom" className="bg-background border-t border-white/10 rounded-t-2xl max-h-[85dvh] overflow-y-auto px-6 pb-8">
                     <SheetHeader className="text-left mb-6">
                         <SheetTitle className="font-display text-2xl font-light tracking-tight text-foreground">
                             {isEditMode ? 'Modifier l\'exercice' : 'Nouvel exercice'}
@@ -167,7 +167,7 @@ export default function ExerciseFormSheet({
                                 }}
                                 className={`${inputClass} !text-left`}
                                 placeholder="Ex: Squat, Développé couché..."
-                                autoFocus={!isEditMode}
+                                autoFocus={false}
                                 autoComplete="off"
                             />
 
