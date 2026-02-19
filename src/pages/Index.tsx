@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AppState, Exercise, ExerciseInput, SessionType } from '@/lib/types';
 import { getExercisesForSession, initCustomExercises, generateExerciseId, getAllExerciseCatalog } from '@/lib/program';
 import { loadState, saveState, resetState, computeBlock, exportData, importData, getDefaultState } from '@/lib/storage';
-import { calculateProgression } from '@/lib/progression';
 import { getCurrentUser, onAuthStateChange } from '@/lib/cloudStorage';
 import SessionHeader from '@/components/SessionHeader';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -25,7 +24,6 @@ import {
 import { fireConfetti } from '@/lib/confetti';
 
 const nextSession: Record<SessionType, SessionType> = { A: 'B', B: 'C', C: 'A' };
-const prevSession: Record<SessionType, SessionType> = { A: 'C', B: 'A', C: 'B' };
 
 export default function Index() {
   const [state, setState] = useState<AppState>(getDefaultState);
@@ -37,7 +35,6 @@ export default function Index() {
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [globalTimer, setGlobalTimer] = useState<{
     exerciseName: string;
     remaining: number;
@@ -82,7 +79,6 @@ export default function Index() {
     const { data: { subscription } } = onAuthStateChange((authenticated, email) => {
       setUserEmail(email);
       if (authenticated) {
-        toast.success('Connecté au cloud');
         // Reload state from cloud
         loadState().then((loaded) => {
           if (!loaded.customExercises) {
@@ -207,21 +203,6 @@ export default function Index() {
           workoutData: { ...prev.workoutData, [key]: history },
         };
         saveState(updated);
-
-        // Show toast and check for progression
-        const exercise = exercises.find(ex => ex.id === exerciseId);
-        if (exercise) {
-          // Check progression with new history
-          // Check progression with new history
-          const progression = calculateProgression(exercise, history);
-          if (progression) {
-            if (progression.type === 'increase_charge') {
-              toast.success(`📈 Progression ! Prochaine fois : ${progression.nextCharge} kg`);
-            } else if (progression.type === 'stagnation') {
-              toast.warning(`Stagnation sur ${exercise.name}`);
-            }
-          }
-        }
 
         // Clear global timer if running
         setGlobalTimer(null);
@@ -405,7 +386,6 @@ export default function Index() {
       });
       setSavedExercises(new Set());
       setExpandedExerciseId(null);
-      toast.success(`Séance ${session} sélectionnée`);
     };
 
     // Only show confirmation if user has already started the session (saved at least one exercise)
@@ -470,25 +450,6 @@ export default function Index() {
     prevAllSaved.current = allSaved;
   }, [allSaved]);
 
-  // Swipe gesture handlers for session navigation
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }, []);
-
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!touchStartRef.current) return;
-    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
-    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
-    touchStartRef.current = null;
-
-    // Must be a horizontal swipe (dx > dy) with sufficient distance
-    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
-
-    const targetSession = dx < 0
-      ? nextSession[state.currentSession]
-      : prevSession[state.currentSession];
-    handleChangeSession(targetSession);
-  }, [state.currentSession, handleChangeSession]);
 
   if (isLoading) {
     return (
@@ -502,8 +463,8 @@ export default function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      <div className="fixed top-6 right-6 z-40 flex items-center gap-2">
+    <div className="min-h-screen bg-background pb-32">
+      <div className={`fixed top-6 right-6 z-40 flex items-center gap-2 transition-transform duration-300 ease-in-out ${headerHidden ? '-translate-y-24' : 'translate-y-0'}`}>
         <ThemeToggle />
         <button
           onClick={() => setShowAuthModal(true)}

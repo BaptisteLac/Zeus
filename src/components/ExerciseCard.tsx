@@ -101,6 +101,7 @@ export default function ExerciseCard({
   const [modified, setModified] = useState(false);
   const [savedValues, setSavedValues] = useState<ExerciseInput | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Set Stepper state
   const [activeSetIndex, setActiveSetIndex] = useState(0);
@@ -119,6 +120,21 @@ export default function ExerciseCard({
     }, 100);
     return () => clearTimeout(timer);
   }, [isExpanded]);
+
+  // Resync sets array when exercise definition changes (e.g. number of sets edited)
+  useEffect(() => {
+    setSets((prev) => {
+      if (prev.length === exercise.sets) return prev;
+      return Array.from({ length: exercise.sets }, (_, i) => prev[i] ?? 0);
+    });
+    setCompletedSets((prev) => {
+      const next = new Set(prev);
+      for (const idx of next) {
+        if (idx >= exercise.sets) next.delete(idx);
+      }
+      return next;
+    });
+  }, [exercise.sets]);
 
   const totalReps = sets.reduce((a, b) => a + b, 0);
   const filledSetsCount = sets.filter((s) => s > 0).length;
@@ -358,7 +374,7 @@ export default function ExerciseCard({
                   <div className="flex items-center gap-2">
                     {/* More Options Drawer Trigger */}
                     <div onClick={(e) => e.stopPropagation()}>
-                      <Drawer>
+                      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
                         <DrawerTrigger asChild>
                           <button
                             className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-surface hover:text-foreground transition-colors"
@@ -378,6 +394,7 @@ export default function ExerciseCard({
                           <div className="flex flex-col gap-3">
                             <button
                               onClick={() => {
+                                setDrawerOpen(false);
                                 onEditDefinition?.();
                               }}
                               className="w-full flex items-center gap-3 px-4 py-4 bg-surface rounded-xl border border-white/5 hover:bg-white/5 active:scale-[0.98] transition-all"
@@ -661,6 +678,7 @@ export default function ExerciseCard({
               onClick={() => {
                 onDelete?.();
                 setShowDeleteConfirm(false);
+                setDrawerOpen(false);
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
