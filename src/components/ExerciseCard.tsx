@@ -1,3 +1,8 @@
+// TODO: Refactor this component into smaller pieces:
+// - ExerciseBlock (container, header)
+// - SerieCard (individual set row)
+// - ProgressionBadge (logic for progression display)
+
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Exercise, WorkoutEntry, ExerciseInput } from '@/lib/types';
 import { calculateProgression } from '@/lib/progression';
@@ -5,7 +10,7 @@ import { Check, ChevronDown, Dumbbell, MoreVertical, RotateCw, Trash2, History, 
 import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
-import { NumberStepper } from './ui/NumberStepper';
+import { ChargeStepper } from './ui/ChargeStepper';
 
 interface ExerciseCardProps {
   index: number;
@@ -253,21 +258,21 @@ export default function ExerciseCard({
     if (saved && !modified) {
       return {
         label: 'Enregistré ✓',
-        style: 'bg-sage text-warm-white',
+        style: 'bg-mb-success text-white',
         disabled: false,
       };
     }
     if (saved && modified) {
       return {
         label: 'Modifier',
-        style: 'bg-primary hover:bg-primary/90 text-primary-foreground',
+        style: 'bg-mb-primary hover:bg-mb-primary/90 text-white',
         disabled: false,
       };
     }
     if (!canSave) {
       return {
         label: 'Enregistrer',
-        style: 'bg-muted text-muted-foreground cursor-not-allowed',
+        style: 'bg-mb-muted/20 text-mb-muted cursor-not-allowed',
         disabled: true,
       };
     }
@@ -275,7 +280,7 @@ export default function ExerciseCard({
     if (allSetsFilled && completedSets.size === 0) {
       return {
         label: 'Enregistrer l\'exercice',
-        style: 'bg-sage hover:bg-sage/90 text-white shadow-lg shadow-sage/20',
+        style: 'bg-mb-success hover:bg-mb-success/90 text-white shadow-lg shadow-mb-success/20',
         disabled: false,
       };
     }
@@ -284,7 +289,7 @@ export default function ExerciseCard({
     if (remainingSets === 1 && sets[activeSetIndex] > 0) {
       return {
         label: 'Terminer l\'exercice ✓',
-        style: 'bg-sage hover:bg-sage/90 text-warm-white',
+        style: 'bg-mb-success hover:bg-mb-success/90 text-white',
         disabled: false,
       };
     }
@@ -292,16 +297,17 @@ export default function ExerciseCard({
     if (sets[activeSetIndex] > 0) {
       return {
         label: `Valider S${activeSetIndex + 1} & Repos ⏱`,
-        style: 'bg-brand hover:bg-brand/90 text-white shadow-lg shadow-brand/20',
+        style: 'bg-mb-primary hover:bg-mb-primary/90 text-white shadow-lg shadow-mb-primary/20',
         disabled: false,
       };
     }
     return {
       label: `Remplir S${activeSetIndex + 1}`,
-      style: 'bg-muted text-muted-foreground cursor-not-allowed',
+      style: 'bg-mb-muted/20 text-mb-muted cursor-not-allowed',
       disabled: true,
     };
   };
+
 
   const getChipState = (i: number): 'active' | 'done' | 'pending' => {
     if (completedSets.has(i) && i !== activeSetIndex) return 'done';
@@ -311,34 +317,34 @@ export default function ExerciseCard({
 
   const chipStyles = {
     active:
-      'border border-brand ring-1 ring-brand bg-input text-brand',
-    done: 'border border-sage/40 bg-sage/10 text-sage',
-    pending: 'border border-transparent bg-input text-muted-foreground',
+      'border border-mb-primary ring-1 ring-mb-primary bg-mb-input text-mb-primary',
+    done: 'border border-mb-success/40 bg-mb-success/10 text-mb-success',
+    pending: 'border border-transparent bg-mb-input text-mb-muted',
   };
 
   const labelStyles = {
-    active: 'text-terracotta font-semibold',
-    done: 'text-sage font-semibold',
-    pending: 'text-stone',
+    active: 'text-mb-primary font-semibold',
+    done: 'text-mb-success font-semibold',
+    pending: 'text-mb-muted',
   };
 
   const getStatusStyles = () => {
-    if (saved) return "bg-surface/50 border-t border-white/5 opacity-60";
-    if (isExpanded) return "bg-surface border-t border-white/10 my-4 shadow-none";
-    return "bg-surface border-t border-white/5 hover:bg-surface/90 mb-3 transition-colors";
+    if (saved) return "bg-mb-surface/50 border-t border-white/5 opacity-60";
+    if (isExpanded) return "bg-mb-surface border-t border-white/10 my-4 shadow-none";
+    return "bg-mb-surface border-t border-white/5 hover:bg-mb-surface/90 mb-3 transition-colors";
   };
 
   const statusBadge = saved ? (
-    <span className="px-2.5 py-0.5 rounded-full bg-sage/10 text-sage text-xs font-medium border border-sage/20 flex items-center gap-1">
+    <span className="px-2.5 py-0.5 rounded-full bg-mb-success/10 text-mb-success text-xs font-medium border border-mb-success/20 flex items-center gap-1">
       <Check className="w-3 h-3" />
       VALIDÉ
     </span>
   ) : isExpanded ? (
-    <span className="px-2.5 py-0.5 rounded-full bg-terracotta/10 text-terracotta text-xs font-medium border border-terracotta/20">
+    <span className="px-2.5 py-0.5 rounded-full bg-mb-primary/10 text-mb-primary text-xs font-medium border border-mb-primary/20">
       EN COURS
     </span>
   ) : (
-    <span className="px-2.5 py-0.5 rounded-full bg-sand/30 text-stone text-xs font-medium border border-sand/30">
+    <span className="px-2.5 py-0.5 rounded-full bg-mb-surface-raised text-mb-muted text-xs font-medium border border-white/5">
       EN ATTENTE
     </span>
   );
@@ -382,12 +388,12 @@ export default function ExerciseCard({
                             <MoreVertical className="w-5 h-5" />
                           </button>
                         </DrawerTrigger>
-                        <DrawerContent className="bg-background border-t border-white/10 px-6 pb-8">
+                        <DrawerContent className="bg-mb-bg border-t border-white/10 px-6 pb-8">
                           <DrawerHeader className="text-left px-0 pt-6 pb-4">
-                            <DrawerTitle className="font-display text-2xl font-light tracking-tight">
+                            <DrawerTitle className="font-display text-2xl font-light tracking-tight text-mb-fg">
                               {exercise.name}
                             </DrawerTitle>
-                            <DrawerDescription>
+                            <DrawerDescription className="text-mb-muted">
                               Gère cet exercice
                             </DrawerDescription>
                           </DrawerHeader>
@@ -397,20 +403,20 @@ export default function ExerciseCard({
                                 setDrawerOpen(false);
                                 onEditDefinition?.();
                               }}
-                              className="w-full flex items-center gap-3 px-4 py-4 bg-surface rounded-xl border border-white/5 hover:bg-white/5 active:scale-[0.98] transition-all"
+                              className="w-full flex items-center gap-3 px-4 py-4 bg-mb-surface rounded-xl border border-white/5 hover:bg-white/5 active:scale-[0.98] transition-all"
                             >
-                              <span className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center text-brand">
+                              <span className="w-8 h-8 rounded-full bg-mb-primary/10 flex items-center justify-center text-mb-primary">
                                 <Pencil className="w-4 h-4" />
                               </span>
-                              <span className="font-medium">Modifier l'exercice</span>
+                              <span className="font-medium text-mb-fg">Modifier l'exercice</span>
                             </button>
 
                             {onDelete && (
                               <button
                                 onClick={() => setShowDeleteConfirm(true)}
-                                className="w-full flex items-center gap-3 px-4 py-4 bg-destructive/5 rounded-xl border border-destructive/10 hover:bg-destructive/10 active:scale-[0.98] transition-all text-destructive"
+                                className="w-full flex items-center gap-3 px-4 py-4 bg-mb-error/5 rounded-xl border border-mb-error/10 hover:bg-mb-error/10 active:scale-[0.98] transition-all text-mb-error"
                               >
-                                <span className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
+                                <span className="w-8 h-8 rounded-full bg-mb-error/10 flex items-center justify-center text-mb-error">
                                   <Trash2 className="w-4 h-4" />
                                 </span>
                                 <span className="font-medium">Supprimer l'exercice</span>
@@ -419,7 +425,7 @@ export default function ExerciseCard({
                           </div>
                           <DrawerFooter className="px-0 pt-4">
                             <DrawerClose asChild>
-                              <button className="w-full py-4 text-center font-medium text-muted-foreground hover:text-foreground">
+                              <button className="w-full py-4 text-center font-medium text-mb-muted hover:text-mb-fg">
                                 Annuler
                               </button>
                             </DrawerClose>
@@ -430,16 +436,16 @@ export default function ExerciseCard({
 
                     <ChevronDown
                       className={cn(
-                        "w-5 h-5 text-muted-foreground transition-transform duration-500 ease-smooth flex-shrink-0",
-                        isExpanded ? "rotate-180 text-brand" : ""
+                        "w-5 h-5 text-mb-muted transition-transform duration-500 ease-smooth flex-shrink-0",
+                        isExpanded ? "rotate-180 text-mb-primary" : ""
                       )}
                     />
                   </div>
                 ) : (
                   <ChevronDown
                     className={cn(
-                      "w-5 h-5 text-muted-foreground transition-transform duration-500 ease-smooth flex-shrink-0",
-                      isExpanded ? "rotate-180 text-brand" : ""
+                      "w-5 h-5 text-mb-muted transition-transform duration-500 ease-smooth flex-shrink-0",
+                      isExpanded ? "rotate-180 text-mb-primary" : ""
                     )}
                   />
                 )}
@@ -448,7 +454,7 @@ export default function ExerciseCard({
               <div className="flex items-center justify-between">
                 {statusBadge}
                 {!isExpanded && lastEntry && (
-                  <span className="text-xs text-stone/60 font-mono flex items-center gap-1">
+                  <span className="text-xs text-mb-muted/60 font-mono flex items-center gap-1">
                     <History className="w-3 h-3" />
                     {lastEntry.charge}kg
                   </span>
@@ -461,17 +467,17 @@ export default function ExerciseCard({
         {/* Collapsed view summary - Only show when NOT expanded and NOT saved */}
         {!isExpanded && !saved && (
           <div className="flex items-center gap-2 mt-1 animate-fade-in">
-            <span className="text-xs font-mono text-stone/80 bg-white/50 px-2 py-0.5 rounded-md">
+            <span className="text-xs font-mono text-mb-muted/80 bg-mb-surface/50 px-2 py-0.5 rounded-md">
               {sets.length} séries
             </span>
-            <span className="text-xs font-mono text-stone/80 bg-white/50 px-2 py-0.5 rounded-md">
+            <span className="text-xs font-mono text-mb-muted/80 bg-mb-surface/50 px-2 py-0.5 rounded-md">
               {exercise.repsMin}-{exercise.repsMax} reps
             </span>
           </div>
         )}
 
         {isExpanded && (
-          <p className="font-sans text-sm text-muted-foreground mt-1">
+          <p className="font-sans text-sm text-mb-muted mt-1">
             Plage : {exercise.repsMin}-{exercise.repsMax} reps · RIR {exercise.rir}
           </p>
         )}
@@ -484,35 +490,35 @@ export default function ExerciseCard({
           {history.length > 0 && (
             <div className="flex justify-end items-end gap-3 mb-4">
               <div className="text-right text-sm">
-                <p className="font-sans text-muted-foreground uppercase tracking-wide text-xs mb-1">Dernière séance</p>
-                <p className="font-mono text-graphite">{lastEntry!.charge}kg ({lastEntry!.sets.join('-')})</p>
+                <p className="font-sans text-mb-muted uppercase tracking-wide text-xs mb-1">Dernière séance</p>
+                <p className="font-mono text-mb-fg">{lastEntry!.charge}kg ({lastEntry!.sets.join('-')})</p>
               </div>
             </div>
           )}
 
           {/* Objectif du Jour */}
           {progression && (
-            <div className="bg-brand/10 border-l-4 border-brand p-4 mb-6 rounded-r-xl flex items-start gap-3">
+            <div className="bg-mb-primary/10 border-l-4 border-mb-primary p-4 mb-6 rounded-r-xl flex items-start gap-3">
               <span className="text-xl">
                 {progression.type === 'increase_charge' ? '🏆' : progression.type === 'stagnation' ? '⚡' : '📈'}
               </span>
               <div>
                 {progression.type === 'increase_charge' && (
                   <>
-                    <p className="font-sans font-medium text-primary">Objectif : {progression.nextCharge} kg</p>
-                    <p className="font-sans text-sm text-secondary">Battre {progression.targetTotalReps} reps au total</p>
+                    <p className="font-sans font-medium text-mb-primary">Objectif : {progression.nextCharge} kg</p>
+                    <p className="font-sans text-sm text-mb-secondary">Battre {progression.targetTotalReps} reps au total</p>
                   </>
                 )}
                 {progression.type === 'stagnation' && (
                   <>
-                    <p className="font-sans font-medium text-primary">Stagnation détectée</p>
-                    <p className="font-sans text-sm text-secondary">Réduis le volume ou deload</p>
+                    <p className="font-sans font-medium text-mb-primary">Stagnation détectée</p>
+                    <p className="font-sans text-sm text-mb-secondary">Réduis le volume ou deload</p>
                   </>
                 )}
                 {progression.type === 'increase_reps' && (
                   <>
-                    <p className="font-sans font-medium text-primary">Objectif : {progression.nextCharge} kg</p>
-                    <p className="font-sans text-sm text-secondary">Battre {progression.targetTotalReps} reps au total</p>
+                    <p className="font-sans font-medium text-mb-primary">Objectif : {progression.nextCharge} kg</p>
+                    <p className="font-sans text-sm text-mb-secondary">Battre {progression.targetTotalReps} reps au total</p>
                   </>
                 )}
               </div>
@@ -526,24 +532,20 @@ export default function ExerciseCard({
             {/* Ligne 1: Charge et RIR */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="font-sans text-xs uppercase tracking-wider text-muted-foreground block mb-2 text-center">
-                  Charge (kg)
-                </label>
-                <div className="bg-input rounded-xl p-1">
-                  <NumberStepper
-                    value={charge}
-                    onChange={setCharge}
-                    step={0.5}
-                    min={0}
-                    max={500}
-                  />
-                </div>
+                <ChargeStepper
+                  value={charge}
+                  onChange={setCharge}
+                  step={0.5}
+                  min={0}
+                  max={500}
+                  label="Charge"
+                />
               </div>
               <div>
-                <label className="font-sans text-xs uppercase tracking-wider text-muted-foreground block mb-2 text-center">
+                <label className="font-sans text-xs uppercase tracking-wider text-mb-muted block mb-2 text-center">
                   RIR Senti
                 </label>
-                <div className="flex items-center justify-between bg-input rounded-xl p-1 h-12">
+                <div className="flex items-center justify-between bg-mb-input rounded-xl p-1 h-12">
                   {[0, 1, 2, 3].map((val) => (
                     <button
                       key={val}
@@ -551,8 +553,8 @@ export default function ExerciseCard({
                       className={cn(
                         "flex-1 h-full rounded-lg text-sm font-mono transition-all",
                         rir === val
-                          ? "bg-brand text-white shadow-sm font-medium"
-                          : "text-muted-foreground hover:bg-surface"
+                          ? "bg-mb-primary text-white shadow-sm font-medium"
+                          : "text-mb-muted hover:bg-mb-surface"
                       )}
                     >
                       {val}
@@ -563,8 +565,8 @@ export default function ExerciseCard({
                     className={cn(
                       "flex-1 h-full rounded-lg text-sm font-mono transition-all",
                       rir >= 4
-                        ? "bg-brand text-white shadow-sm font-medium"
-                        : "text-muted-foreground hover:bg-surface"
+                        ? "bg-mb-primary text-white shadow-sm font-medium"
+                        : "text-mb-muted hover:bg-mb-surface"
                     )}
                   >
                     4+
@@ -576,11 +578,11 @@ export default function ExerciseCard({
             {/* Set Chips */}
             <div>
               <div className="flex justify-between items-baseline mb-3">
-                <label className="font-sans text-xs uppercase tracking-wider text-muted-foreground">
+                <label className="font-sans text-xs uppercase tracking-wider text-mb-muted">
                   Séries
                 </label>
-                <span className="font-sans text-xs text-secondary font-medium">
-                  Total: <span className="font-mono text-brand">{totalReps}</span>
+                <span className="font-sans text-xs text-mb-secondary font-medium">
+                  Total: <span className="font-mono text-mb-primary">{totalReps}</span>
                 </span>
               </div>
 
@@ -592,7 +594,7 @@ export default function ExerciseCard({
                       {/* Set label */}
                       <span className={cn(
                         "text-[10px] uppercase tracking-widest font-sans",
-                        state === 'active' ? 'text-brand font-semibold' : 'text-muted-foreground'
+                        state === 'active' ? 'text-mb-primary font-semibold' : 'text-mb-muted'
                       )}>
                         {state === 'done' ? '✓' : `S${i + 1}`}
                       </span>
@@ -617,7 +619,7 @@ export default function ExerciseCard({
                           }}
                           className={cn(
                             "w-full bg-transparent rounded-xl px-1 py-3 font-mono text-lg text-center outline-none min-h-[48px] transition-colors",
-                            state === 'done' ? 'text-sage font-semibold' : 'text-primary'
+                            state === 'done' ? 'text-mb-success font-semibold' : 'text-mb-primary'
                           )}
                           placeholder="-"
                         />
@@ -629,15 +631,15 @@ export default function ExerciseCard({
 
               {/* Progress bar */}
               <div className="mt-4 flex items-center gap-3">
-                <div className="flex-1 h-1.5 rounded-full bg-input overflow-hidden">
+                <div className="flex-1 h-1.5 rounded-full bg-mb-input overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-sage transition-all duration-500 ease-out"
+                    className="h-full rounded-full bg-mb-success transition-all duration-500 ease-out"
                     style={{
                       width: `${(completedSets.size / exercise.sets) * 100}%`,
                     }}
                   />
                 </div>
-                <span className="font-sans text-[11px] text-stone tabular-nums">
+                <span className="font-sans text-[11px] text-mb-muted tabular-nums">
                   {completedSets.size}/{exercise.sets}
                 </span>
               </div>
@@ -650,8 +652,8 @@ export default function ExerciseCard({
             disabled={buttonConfig.disabled}
             className={cn(
               "w-full mt-6 rounded-full transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4 min-h-[48px]",
-              buttonConfig.label.includes('Valider') ? 'bg-brand text-white hover:bg-brand/90' :
-                buttonConfig.style.replace('bg-primary', 'bg-surface border border-white/10').replace('rounded-md', 'rounded-full')
+              buttonConfig.label.includes('Valider') ? 'bg-mb-primary text-white hover:bg-mb-primary/90' :
+                buttonConfig.style.replace('bg-mb-primary', 'bg-mb-surface border border-white/10').replace('rounded-md', 'rounded-full')
             )}
           >
             {buttonConfig.label}
@@ -661,17 +663,17 @@ export default function ExerciseCard({
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="bg-linen border-sand max-w-sm mx-auto">
+        <AlertDialogContent className="bg-mb-bg border-white/10 max-w-sm mx-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl text-charcoal">
+            <AlertDialogTitle className="font-display text-xl text-mb-fg">
               Supprimer {exercise.name} ?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-stone">
+            <AlertDialogDescription className="text-mb-muted">
               L'exercice sera retiré de ta séance. L'historique de performances sera conservé.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="bg-warm-white border-sand text-stone hover:bg-sand/30">
+            <AlertDialogCancel className="bg-mb-surface border-white/10 text-mb-muted hover:bg-white/5 hover:text-mb-fg">
               Annuler
             </AlertDialogCancel>
             <AlertDialogAction
@@ -680,7 +682,7 @@ export default function ExerciseCard({
                 setShowDeleteConfirm(false);
                 setDrawerOpen(false);
               }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-mb-error text-white hover:bg-mb-error/90"
             >
               Supprimer
             </AlertDialogAction>

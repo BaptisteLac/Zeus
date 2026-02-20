@@ -4,9 +4,9 @@ import { getExercisesForSession, initCustomExercises, generateExerciseId, getAll
 import { loadState, saveState, resetState, computeBlock, exportData, importData, getDefaultState } from '@/lib/storage';
 import { getCurrentUser, onAuthStateChange } from '@/lib/cloudStorage';
 import SessionHeader from '@/components/SessionHeader';
-import { ThemeToggle } from '@/components/ThemeToggle';
+
 import ExerciseCard from '@/components/ExerciseCard';
-import FloatingTimer from '@/components/FloatingTimer';
+import DynamicIslandTimer from '@/components/ui/DynamicIslandTimer';
 import SessionSummary from '@/components/SessionSummary';
 import ExerciseFormSheet from '@/components/ExerciseFormSheet';
 import { AuthModal } from '@/components/AuthModal';
@@ -40,7 +40,8 @@ export default function Index() {
     remaining: number;
     total: number;
   } | null>(null);
-  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Timer interval removed in favor of DynamicIslandTimer internal logic
+
 
   // CRUD state
   const [showExerciseForm, setShowExerciseForm] = useState(false);
@@ -108,38 +109,9 @@ export default function Index() {
     }
   }, [state.programStartDate, state.currentBlock, state.weekNumber, isLoading]);
 
-  // Global timer management
-  useEffect(() => {
-    if (!globalTimer || globalTimer.remaining <= 0) {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      return;
-    }
+  // Global timer management - Handled by DynamicIslandTimer now
+  // We keep the state to know IF a timer is active, but the counting is inside the component
 
-    timerIntervalRef.current = setInterval(() => {
-      setGlobalTimer((prev) => {
-        if (!prev || prev.remaining <= 1) {
-          // Timer finished - vibration + sound
-          if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
-          try {
-            const ctx = new AudioContext();
-            const osc = ctx.createOscillator();
-            osc.frequency.value = 880;
-            osc.connect(ctx.destination);
-            osc.start();
-            setTimeout(() => { osc.stop(); ctx.close(); }, 300);
-          } catch {
-            // ignore audio context errors
-          }
-          return prev ? { ...prev, remaining: 0 } : null;
-        }
-        return { ...prev, remaining: prev.remaining - 1 };
-      });
-    }, 1000);
-
-    return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
-  }, [globalTimer?.remaining]);
 
   // Dismiss block changed banner
   useEffect(() => {
@@ -455,8 +427,8 @@ export default function Index() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-terracotta/20 border-t-terracotta rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-stone">Chargement...</p>
+          <div className="w-12 h-12 border-4 border-mb-primary/20 border-t-mb-primary rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-mb-muted">Chargement...</p>
         </div>
       </div>
     );
@@ -464,26 +436,6 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <div className={`fixed top-6 right-6 z-40 flex items-center gap-2 transition-transform duration-300 ease-in-out ${headerHidden ? '-translate-y-24' : 'translate-y-0'}`}>
-        <ThemeToggle />
-        <button
-          onClick={() => setShowAuthModal(true)}
-          className="transition-all hover:scale-105"
-          title={userEmail ? `Connecté: ${userEmail}` : 'Se connecter'}
-        >
-          {userEmail ? (
-            // Avatar with first letter
-            <div className="w-10 h-10 rounded-full bg-terracotta text-white flex items-center justify-center font-bold text-sm shadow-lg">
-              {userEmail.charAt(0).toUpperCase()}
-            </div>
-          ) : (
-            // "Se Connecter" button
-            <div className="px-4 py-2 bg-background border border-border rounded-full shadow-lg hover:shadow-xl transition-all">
-              <span className="text-xs font-medium uppercase tracking-[0.08em] text-stone">Se Connecter</span>
-            </div>
-          )}
-        </button>
-      </div>
 
       {/* Auth Modal */}
       <AuthModal
@@ -495,28 +447,32 @@ export default function Index() {
         }}
       />
 
-      {globalTimer && globalTimer.remaining >= 0 && (
-        <FloatingTimer
-          remaining={globalTimer.remaining}
-          total={globalTimer.total}
-          onSkip={() => setGlobalTimer(null)}
-          onAdjust={(delta) => setGlobalTimer(prev =>
-            prev ? { ...prev, remaining: Math.max(0, prev.remaining + delta), total: Math.max(prev.total, prev.remaining + delta) } : null
-          )}
-          onClose={() => setGlobalTimer(null)}
+      {globalTimer && (
+        <DynamicIslandTimer
+          initialSeconds={globalTimer.total}
+          isRunning={true}
+          onDismiss={() => setGlobalTimer(null)}
+          onComplete={() => {
+            // Optional: Add sound effect here if needed, vibration is in the component
+            try {
+              const ctx = new AudioContext();
+              const osc = ctx.createOscillator();
+              osc.frequency.value = 880;
+              osc.connect(ctx.destination);
+              osc.start();
+              setTimeout(() => { osc.stop(); ctx.close(); }, 300);
+            } catch { }
+          }}
         />
       )}
       <SessionHeader
         session={state.currentSession}
-        // block={state.currentBlock}    // TODO: à réactiver
-        // week={state.weekNumber}       // TODO: à réactiver
-        // blockChanged={blockChanged}   // TODO: à réactiver
         completedCount={savedExercises.size}
         totalCount={exercises.length}
-        // onReset={handleReset}         // TODO: à réactiver
-        // onChangeBlock={handleChangeBlock} // TODO: à réactiver
         onChangeSession={handleChangeSession}
         hidden={headerHidden}
+        userEmail={userEmail}
+        onAuthClick={() => setShowAuthModal(true)}
       />
 
       <input
@@ -527,7 +483,7 @@ export default function Index() {
         onChange={handleFileChange}
       />
 
-      <div className="mx-auto max-w-lg px-6 py-6 space-y-6">
+      <div className="mx-auto max-w-lg px-6 pt-36 pb-6 space-y-6">
         {exercises.map((exercise, i) => (
           <ExerciseCard
             key={exercise.id}
@@ -556,10 +512,10 @@ export default function Index() {
             setEditingExercise(undefined);
             setShowExerciseForm(true);
           }}
-          className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-sand hover:border-terracotta/50 py-4 transition-all duration-300 group"
+          className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-mb-primary/20 hover:border-mb-primary/50 py-4 transition-all duration-300 group"
         >
-          <span className="w-8 h-8 rounded-full bg-terracotta/10 group-hover:bg-terracotta/20 flex items-center justify-center transition-colors">
-            <svg className="w-4 h-4 text-terracotta" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <span className="w-8 h-8 rounded-full bg-mb-primary/10 group-hover:bg-mb-primary/20 flex items-center justify-center transition-colors">
+            <svg className="w-4 h-4 text-mb-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
           </span>
@@ -588,10 +544,10 @@ export default function Index() {
           <button
             onClick={handleFinishSession}
             className={`w-full rounded-lg py-4 text-[13px] font-medium uppercase tracking-[0.08em] shadow-lifted transition-all duration-400 ease-smooth hover:-translate-y-0.5 ${allSaved
-              ? 'bg-gradient-to-r from-sage to-terracotta text-white animate-pulse shadow-glow'
+              ? 'bg-gradient-to-r from-mb-secondary to-mb-primary text-white animate-pulse shadow-glow'
               : savedExercises.size === 0
-                ? 'bg-stone/20 text-stone'
-                : 'bg-primary text-primary-foreground'
+                ? 'bg-mb-muted/20 text-mb-muted'
+                : 'bg-mb-primary text-primary-foreground'
               }`}
           >
             {allSaved

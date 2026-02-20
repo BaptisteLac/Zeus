@@ -13,7 +13,7 @@ export default function SessionSelector({
 }: SessionSelectorProps) {
     return (
         <div className="flex items-center gap-2">
-            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-stone mr-1">
+            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-mb-muted mr-1">
                 Séance:
             </span>
             <div className="flex gap-1.5">
@@ -25,8 +25,8 @@ export default function SessionSelector({
               min-w-[32px] h-[32px] rounded-md font-mono text-sm font-medium
               transition-all duration-300 ease-smooth
               ${currentSession === session
-                                ? 'bg-terracotta text-warm-white shadow-sm'
-                                : 'bg-warm-white border border-sand text-stone hover:border-terracotta hover:text-terracotta'
+                                ? 'bg-mb-primary text-white shadow-sm'
+                                : 'bg-mb-surface border border-white/5 text-mb-muted hover:border-mb-primary hover:text-mb-primary'
                             }
             `}
                         aria-label={`Séance ${session}`}

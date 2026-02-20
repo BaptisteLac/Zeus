@@ -1,129 +1,118 @@
 import { SessionType } from '@/lib/types';
-import SessionSelector from './SessionSelector';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { ChevronDown, User } from 'lucide-react';
 
 interface SessionHeaderProps {
   session: SessionType;
-  // block: 1 | 2 | 3;   // TODO: à réactiver
-  // week: number;        // TODO: à réactiver
-  // blockChanged: boolean; // TODO: à réactiver
   completedCount: number;
   totalCount: number;
-  // onReset: () => void;          // TODO: à réactiver
-  // onChangeBlock: (block: 1 | 2 | 3) => void; // TODO: à réactiver
   onChangeSession: (session: SessionType) => void;
   hidden?: boolean;
-}
-
-import { ChevronDown, RotateCcw } from 'lucide-react';
-
-
-const sessionLabels: Record<SessionType, string> = {
-  A: 'Séance A',
-  B: 'Séance B',
-  C: 'Séance C',
-};
-
-function formatDate() {
-  return new Date().toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+  userEmail?: string;
+  onAuthClick?: () => void;
 }
 
 export default function SessionHeader({
   session,
-  // block,        // TODO: à réactiver
-  // week,         // TODO: à réactiver
-  // blockChanged, // TODO: à réactiver
   completedCount,
   totalCount,
-  // onReset,      // TODO: à réactiver
-  // onChangeBlock, // TODO: à réactiver
   onChangeSession,
   hidden = false,
+  userEmail,
+  onAuthClick
 }: SessionHeaderProps) {
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+  // Format: "MAR. 12" -> "MAR 12"
+  const dateStr = format(new Date(), "EEE d", { locale: fr }).toUpperCase().replace('.', '');
+
   return (
-    <div className={cn(
-      "sticky top-0 z-30 bg-background px-6 pt-6 pb-4 transition-transform duration-300 ease-in-out",
-      hidden && "-translate-y-full"
-    )}>
-      {/* TODO: à réactiver — notification de changement de bloc
-      {blockChanged && (
-        <div className="mb-4 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2.5 text-center text-sm font-medium text-foreground">
-          Tu passes en Bloc {block} — les paramètres ont été ajustés.
-        </div>
+    <header
+      className={cn(
+        "fixed top-0 left-0 right-0 z-30 transition-all duration-300 ease-smooth mb-safe-top",
+        hidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"
       )}
-      */}
+    >
+      {/* Sleek blur backdrop */}
+      <div className="absolute inset-0 bg-mb-bg/85 supports-[backdrop-filter]:bg-mb-bg/60 backdrop-blur-2xl border-b border-white/5" />
 
-      <div className="flex items-start justify-between pr-28">
-        <div>
-          <h1 className="font-display text-4xl font-light tracking-tight text-foreground">
-            {sessionLabels[session]}
-          </h1>
-          <p className="mt-1 text-xs font-medium uppercase tracking-[0.08em] text-stone">
-            {formatDate()}
-          </p>
+      <div className="relative px-6 pt-5 pb-4 max-w-lg mx-auto flex items-end justify-between">
+        {/* Left: Large Title & Date */}
+        <div className="flex flex-col">
+          <span className="text-[11px] font-semibold tracking-[0.12em] text-mb-primary uppercase mb-1.5 ml-0.5">
+            {dateStr}
+          </span>
+          <div className="relative group">
+            <button className="flex items-center gap-2 outline-none active:opacity-60 transition-opacity">
+              <h1 className="font-display text-4xl font-semibold text-mb-fg tracking-tight">
+                Séance {session}
+              </h1>
+              <div className="w-7 h-7 mt-1 rounded-full bg-mb-surface border border-white/5 flex items-center justify-center shadow-sm">
+                <ChevronDown className="w-4 h-4 text-mb-muted" />
+              </div>
+            </button>
+
+            {/* Dropdown Menu */}
+            <div className="absolute left-0 top-full mt-3 w-48 bg-mb-surface border border-white/10 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left z-50 overflow-hidden backdrop-blur-xl">
+              {(['A', 'B', 'C'] as SessionType[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onChangeSession(s)}
+                  className={cn(
+                    "w-full text-left px-5 py-3.5 text-sm font-medium transition-colors hover:bg-white/5 active:bg-white/10 flex items-center justify-between",
+                    session === s ? "text-mb-primary bg-mb-primary/5" : "text-mb-fg"
+                  )}
+                >
+                  <span>Séance {s}</span>
+                  {session === s && <div className="w-1.5 h-1.5 rounded-full bg-mb-primary" />}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-      </div>
+        {/* Right: Progress & Auth */}
+        <div className="flex items-center gap-3 pb-1.5">
+          {/* Minimalist Progress Pill */}
+          {totalCount > 0 && (
+            <div className="px-3 py-1.5 rounded-full bg-mb-surface border border-white/5 flex items-center gap-2 shadow-sm">
+              <span className="text-xs font-mono font-medium text-mb-fg tabular-nums">{completedCount}/{totalCount}</span>
+            </div>
+          )}
 
-      <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <SessionSelector currentSession={session} onChange={onChangeSession} />
-
-        {/* TODO: à réactiver si besoin
-        <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
-          {/* Week Badge *\/}
-          <div className="flex items-center whitespace-nowrap rounded-md border border-border px-3 py-1.5 bg-background">
-            <span className="text-[10px] font-sans font-medium uppercase tracking-wider text-stone/70 mr-1.5">Semaine</span>
-            <span className="text-xs font-mono font-medium text-foreground">{week}</span>
-          </div>
-
-          {/* Block Select *\/}
-          <div className="relative group flex-1 sm:flex-none">
-            <select
-              value={block}
-              onChange={(e) => onChangeBlock(Number(e.target.value) as 1 | 2 | 3)}
-              className="appearance-none w-full bg-background border border-border rounded-md pl-3 pr-8 py-1.5 text-xs font-medium text-stone focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta/20 transition-all cursor-pointer hover:border-stone/40 shadow-sm"
+          {/* Auth Button */}
+          {onAuthClick && (
+            <button
+              onClick={onAuthClick}
+              className="transition-transform active:scale-90 outline-none relative"
+              title={userEmail ? `Connecté: ${userEmail}` : 'Se connecter'}
             >
-              <option value={1}>Bloc 1</option>
-              <option value={2}>Bloc 2</option>
-              <option value={3}>Bloc 3</option>
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-stone pointer-events-none group-hover:text-foreground transition-colors" />
-          </div>
-
-          {/* Reset Button *\/}
-          <button
-            onClick={onReset}
-            className="ml-auto sm:ml-2 p-2 rounded-md hover:bg-stone/5 text-stone/60 hover:text-destructive transition-colors"
-            title="Réinitialiser"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
+              {userEmail ? (
+                <>
+                  <div className="w-10 h-10 rounded-full bg-mb-primary text-white flex items-center justify-center font-bold text-sm shadow-[0_0_15px_-3px_rgba(193,68,14,0.4)]">
+                    {userEmail.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-mb-success rounded-full border-2 border-mb-bg" />
+                </>
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-mb-surface border border-white/10 flex items-center justify-center shadow-sm hover:bg-white/5 transition-colors text-mb-fg">
+                  <User className="w-5 h-5" />
+                </div>
+              )}
+            </button>
+          )}
         </div>
-        */}
       </div>
 
-      {/* Session progress bar */}
-      <div className="mt-4 flex items-center gap-3">
-        <div className="flex-1 h-1.5 rounded-full bg-sand/30 overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-700 ease-out ${completedCount === totalCount && totalCount > 0
-              ? 'bg-sage'
-              : 'bg-sage'
-              }`}
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <span className="font-sans text-[11px] text-stone tabular-nums whitespace-nowrap">
-          {completedCount}/{totalCount}
-        </span>
+      {/* Ultra-thin Progress Bar (Bottom Line) */}
+      <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-mb-surface">
+        <div
+          className="h-full bg-mb-primary shadow-[0_0_10px_rgba(193,68,14,0.6)] transition-all duration-700 ease-out"
+          style={{ width: `${progress}%` }}
+        />
       </div>
-
-      <div className="mt-3 h-px bg-border" />
-    </div>
+    </header>
   );
 }

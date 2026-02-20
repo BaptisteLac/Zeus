@@ -47,10 +47,10 @@ export default function ExerciseFormSheet({
 }: ExerciseFormSheetProps) {
     const isEditMode = !!exercise;
     const [name, setName] = useState('');
-    const [sets, setSets] = useState(3);
-    const [repsMin, setRepsMin] = useState(8);
-    const [repsMax, setRepsMax] = useState(12);
-    const [rest, setRest] = useState(90);
+    const [sets, setSets] = useState<number | ''>(3);
+    const [repsMin, setRepsMin] = useState<number | ''>(8);
+    const [repsMax, setRepsMax] = useState<number | ''>(12);
+    const [rest, setRest] = useState<number | ''>(90);
     const [rir, setRir] = useState('1');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -113,16 +113,16 @@ export default function ExerciseFormSheet({
         setShowSuggestions(value.trim().length > 0);
     };
 
-    const canSubmit = name.trim().length > 0 && sets > 0 && repsMin > 0 && repsMax >= repsMin;
+    const canSubmit = name.trim().length > 0 && typeof sets === 'number' && sets > 0 && typeof repsMin === 'number' && repsMin > 0 && typeof repsMax === 'number' && repsMax >= repsMin && typeof rest === 'number';
 
     const handleSubmit = () => {
         if (!canSubmit) return;
         onSubmit({
             name: name.trim(),
-            sets,
-            repsMin,
-            repsMax,
-            rest,
+            sets: sets as number,
+            repsMin: repsMin as number,
+            repsMax: repsMax as number,
+            rest: rest as number,
             rir,
         });
         onOpenChange(false);
@@ -135,18 +135,18 @@ export default function ExerciseFormSheet({
     };
 
     const inputClass =
-        'w-full bg-surface border border-input rounded-xl focus:border-brand focus:ring-1 focus:ring-brand transition-all px-4 py-3 font-mono text-base text-foreground text-center outline-none min-h-[48px] placeholder:text-muted-foreground/50';
-    const labelClass = 'font-sans text-xs uppercase tracking-wider text-muted-foreground block mb-2';
+        'w-full bg-mb-surface border border-mb-input rounded-xl focus:border-mb-primary focus:ring-1 focus:ring-mb-primary transition-all px-4 py-3 font-mono text-base text-mb-fg text-center outline-none min-h-[48px] placeholder:text-mb-muted/50';
+    const labelClass = 'font-sans text-xs uppercase tracking-wider text-mb-muted block mb-2';
 
     return (
         <>
             <Sheet open={open} onOpenChange={onOpenChange}>
-                <SheetContent side="bottom" className="bg-background border-t border-white/10 rounded-t-2xl max-h-[85dvh] overflow-y-auto px-6 pb-8">
+                <SheetContent side="bottom" className="bg-mb-bg border-t border-white/10 rounded-t-2xl max-h-[85dvh] overflow-y-auto px-6 pb-8">
                     <SheetHeader className="text-left mb-6">
-                        <SheetTitle className="font-display text-2xl font-light tracking-tight text-foreground">
+                        <SheetTitle className="font-display text-2xl font-light tracking-tight text-mb-fg">
                             {isEditMode ? 'Modifier l\'exercice' : 'Nouvel exercice'}
                         </SheetTitle>
-                        <SheetDescription className="text-muted-foreground text-sm">
+                        <SheetDescription className="text-mb-muted text-sm">
                             {isEditMode
                                 ? 'Modifie les paramètres de cet exercice'
                                 : 'Ajoute un exercice à ta séance'}
@@ -175,7 +175,7 @@ export default function ExerciseFormSheet({
                             {shouldShowSuggestions && (filteredCatalog.length > 0 || !exactMatch) && (
                                 <div
                                     ref={suggestionsRef}
-                                    className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface border border-input rounded-xl shadow-lifted overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200"
+                                    className="absolute left-0 right-0 top-full mt-1 z-50 bg-mb-surface border border-mb-input rounded-xl shadow-lifted overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200"
                                 >
                                     {/* Matching exercises */}
                                     {filteredCatalog.length > 0 && (
@@ -188,12 +188,12 @@ export default function ExerciseFormSheet({
                                                     className="w-full text-left px-4 py-3 hover:bg-white/5 active:bg-white/10 transition-colors flex items-center justify-between gap-3 border-b border-white/5 last:border-b-0"
                                                 >
                                                     <div className="flex items-center gap-2.5 min-w-0">
-                                                        <span className="text-brand text-sm shrink-0">💪</span>
+                                                        <span className="text-mb-primary text-sm shrink-0">💪</span>
                                                         <div className="min-w-0">
-                                                            <span className="text-foreground text-sm font-medium block truncate">
+                                                            <span className="text-mb-fg text-sm font-medium block truncate">
                                                                 {entry.name}
                                                             </span>
-                                                            <span className="text-muted-foreground text-[11px]">
+                                                            <span className="text-mb-muted text-[11px]">
                                                                 {entry.sets}×{entry.repsMin}-{entry.repsMax} · {entry.rest}s
                                                             </span>
                                                         </div>
@@ -202,7 +202,7 @@ export default function ExerciseFormSheet({
                                                         {entry.sessions.map((s) => (
                                                             <span
                                                                 key={s}
-                                                                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/10 text-muted-foreground text-[10px] font-semibold"
+                                                                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/10 text-mb-muted text-[10px] font-semibold"
                                                             >
                                                                 {s}
                                                             </span>
@@ -217,19 +217,19 @@ export default function ExerciseFormSheet({
                                     {!exactMatch && name.trim().length > 0 && (
                                         <>
                                             {filteredCatalog.length > 0 && (
-                                                <div className="border-t border-sand/60" />
+                                                <div className="border-t border-white/5" />
                                             )}
                                             <button
                                                 onMouseDown={(e) => e.preventDefault()}
                                                 onClick={() => setShowSuggestions(false)}
-                                                className="w-full text-left px-4 py-3 hover:bg-brand/10 active:bg-brand/20 transition-colors flex items-center gap-2.5"
+                                                className="w-full text-left px-4 py-3 hover:bg-mb-primary/10 active:bg-mb-primary/20 transition-colors flex items-center gap-2.5"
                                             >
-                                                <span className="w-5 h-5 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
-                                                    <svg className="w-3 h-3 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                <span className="w-5 h-5 rounded-full bg-mb-primary/10 flex items-center justify-center shrink-0">
+                                                    <svg className="w-3 h-3 text-mb-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                                     </svg>
                                                 </span>
-                                                <span className="text-brand text-sm font-medium">
+                                                <span className="text-mb-primary text-sm font-medium">
                                                     Créer « {name.trim()} »
                                                 </span>
                                             </button>
@@ -249,7 +249,10 @@ export default function ExerciseFormSheet({
                                     min={1}
                                     max={10}
                                     value={sets}
-                                    onChange={(e) => setSets(Math.max(1, parseInt(e.target.value) || 1))}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setSets(val === '' ? '' : Math.max(1, parseInt(val) || 1));
+                                    }}
                                     className={inputClass}
                                 />
                             </div>
@@ -261,7 +264,10 @@ export default function ExerciseFormSheet({
                                     min={0}
                                     step={15}
                                     value={rest}
-                                    onChange={(e) => setRest(Math.max(0, parseInt(e.target.value) || 0))}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setRest(val === '' ? '' : Math.max(0, parseInt(val) || 0));
+                                    }}
                                     className={inputClass}
                                 />
                             </div>
@@ -277,7 +283,10 @@ export default function ExerciseFormSheet({
                                     min={1}
                                     max={50}
                                     value={repsMin}
-                                    onChange={(e) => setRepsMin(Math.max(1, parseInt(e.target.value) || 1))}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setRepsMin(val === '' ? '' : Math.max(1, parseInt(val) || 1));
+                                    }}
                                     className={inputClass}
                                 />
                             </div>
@@ -289,7 +298,10 @@ export default function ExerciseFormSheet({
                                     min={1}
                                     max={50}
                                     value={repsMax}
-                                    onChange={(e) => setRepsMax(Math.max(1, parseInt(e.target.value) || 1))}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setRepsMax(val === '' ? '' : Math.max(1, parseInt(val) || 1));
+                                    }}
                                     className={inputClass}
                                 />
                             </div>
@@ -304,8 +316,8 @@ export default function ExerciseFormSheet({
                                         key={value}
                                         onClick={() => setRir(value)}
                                         className={`flex-1 rounded-lg py-3 font-mono text-sm font-medium transition-all duration-300 ${rir === value
-                                            ? 'bg-brand text-white shadow-sm'
-                                            : 'bg-surface border border-input text-muted-foreground hover:bg-surface/80 hover:text-foreground'
+                                            ? 'bg-mb-primary text-white shadow-sm'
+                                            : 'bg-mb-surface border border-mb-input text-mb-muted hover:bg-mb-surface/80 hover:text-mb-fg'
                                             }`}
                                     >
                                         {value}
@@ -319,8 +331,8 @@ export default function ExerciseFormSheet({
                             onClick={handleSubmit}
                             disabled={!canSubmit}
                             className={`w-full rounded-full transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4 mt-2 ${canSubmit
-                                ? 'bg-brand hover:bg-brand/90 text-white'
-                                : 'bg-surface border border-white/5 text-muted-foreground cursor-not-allowed'
+                                ? 'bg-mb-primary hover:bg-mb-primary/90 text-white'
+                                : 'bg-mb-surface border border-white/5 text-mb-muted cursor-not-allowed'
                                 }`}
                         >
                             {isEditMode ? 'Enregistrer les modifications' : 'Ajouter l\'exercice'}
@@ -330,7 +342,7 @@ export default function ExerciseFormSheet({
                         {isEditMode && onDelete && (
                             <button
                                 onClick={() => setShowDeleteConfirm(true)}
-                                className="w-full rounded-md border-2 border-destructive/30 text-destructive font-sans font-medium text-sm uppercase tracking-wider py-4 transition-all duration-300 hover:bg-destructive/10 active:scale-[0.98]"
+                                className="w-full rounded-md border-2 border-mb-error/30 text-mb-error font-sans font-medium text-sm uppercase tracking-wider py-4 transition-all duration-300 hover:bg-mb-error/10 active:scale-[0.98]"
                             >
                                 Supprimer cet exercice
                             </button>
@@ -341,22 +353,22 @@ export default function ExerciseFormSheet({
 
             {/* Delete confirmation dialog */}
             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                <AlertDialogContent className="bg-linen border-sand max-w-sm mx-auto">
+                <AlertDialogContent className="bg-mb-bg border-white/10 max-w-sm mx-auto">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="font-display text-xl text-charcoal">
+                        <AlertDialogTitle className="font-display text-xl text-mb-fg">
                             Supprimer {exercise?.name} ?
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="text-stone">
+                        <AlertDialogDescription className="text-mb-muted">
                             L'exercice sera retiré de ta séance. L'historique de performances sera conservé.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">
-                        <AlertDialogCancel className="bg-warm-white border-sand text-stone hover:bg-sand/30">
+                        <AlertDialogCancel className="bg-mb-surface border-white/10 text-mb-muted hover:bg-white/5">
                             Annuler
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            className="bg-mb-error text-white hover:bg-mb-error/90"
                         >
                             Supprimer
                         </AlertDialogAction>

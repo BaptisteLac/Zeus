@@ -44,9 +44,9 @@ export default function SessionSummary({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-6">
-            <div className="bg-linen rounded-2xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="bg-mb-surface border border-white/10 rounded-2xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
                 {/* Header */}
-                <div className="bg-sage text-white px-6 py-5 text-center">
+                <div className="bg-mb-primary text-white px-6 py-5 text-center">
                     <div className="text-3xl mb-2">🎉</div>
                     <h2 className="font-display text-2xl font-light tracking-tight">
                         Séance {session} terminée
@@ -59,20 +59,20 @@ export default function SessionSummary({
                 {/* Stats */}
                 <div className="px-6 py-5 space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-warm-white rounded-lg p-4 text-center">
-                            <p className="font-sans text-[10px] uppercase tracking-wider text-stone">
+                        <div className="bg-mb-bg rounded-lg p-4 text-center">
+                            <p className="font-sans text-[10px] uppercase tracking-wider text-mb-muted">
                                 Volume total
                             </p>
-                            <p className="font-mono text-2xl text-charcoal mt-1">
+                            <p className="font-mono text-2xl text-mb-fg mt-1">
                                 {totalVolume.toLocaleString('fr-FR')}
-                                <span className="text-sm text-stone ml-1">kg</span>
+                                <span className="text-sm text-mb-muted ml-1">kg</span>
                             </p>
                         </div>
-                        <div className="bg-warm-white rounded-lg p-4 text-center">
-                            <p className="font-sans text-[10px] uppercase tracking-wider text-stone">
+                        <div className="bg-mb-bg rounded-lg p-4 text-center">
+                            <p className="font-sans text-[10px] uppercase tracking-wider text-mb-muted">
                                 Exercices
                             </p>
-                            <p className="font-mono text-2xl text-charcoal mt-1">
+                            <p className="font-mono text-2xl text-mb-fg mt-1">
                                 {completedCount}/{totalCount}
                             </p>
                         </div>
@@ -81,16 +81,16 @@ export default function SessionSummary({
                     {/* Progressions */}
                     {improvements.length > 0 && (
                         <div>
-                            <p className="font-sans text-xs uppercase tracking-wider text-stone mb-2">
+                            <p className="font-sans text-xs uppercase tracking-wider text-mb-muted mb-2">
                                 📈 Progressions
                             </p>
                             <div className="space-y-1.5">
                                 {improvements.map((p, i) => (
                                     <div
                                         key={i}
-                                        className="flex items-center gap-2 text-sm text-charcoal bg-sage/10 rounded-md px-3 py-2"
+                                        className="flex items-center gap-2 text-sm text-mb-fg bg-mb-success/10 border border-mb-success/20 rounded-md px-3 py-2"
                                     >
-                                        <span className="text-sage">↑</span>
+                                        <span className="text-mb-success">↑</span>
                                         <span className="font-sans">{p.name}</span>
                                     </div>
                                 ))}
@@ -101,16 +101,16 @@ export default function SessionSummary({
                     {/* Stagnations */}
                     {stagnations.length > 0 && (
                         <div>
-                            <p className="font-sans text-xs uppercase tracking-wider text-stone mb-2">
+                            <p className="font-sans text-xs uppercase tracking-wider text-mb-muted mb-2">
                                 ⚠️ Points d'attention
                             </p>
                             <div className="space-y-1.5">
                                 {stagnations.map((p, i) => (
                                     <div
                                         key={i}
-                                        className="flex items-center gap-2 text-sm text-charcoal bg-terracotta/10 rounded-md px-3 py-2"
+                                        className="flex items-center gap-2 text-sm text-mb-fg bg-mb-secondary/10 border border-mb-secondary/20 rounded-md px-3 py-2"
                                     >
-                                        <span className="text-terracotta">→</span>
+                                        <span className="text-mb-secondary">→</span>
                                         <span className="font-sans">{p.name} — stagnation</span>
                                     </div>
                                 ))}
@@ -123,7 +123,7 @@ export default function SessionSummary({
                 <div className="px-6 pb-6">
                     <button
                         onClick={onClose}
-                        className="w-full bg-brand text-white rounded-lg py-4 font-sans text-sm font-medium uppercase tracking-wider transition-all hover:bg-brand/90 active:scale-[0.98]"
+                        className="w-full bg-mb-primary text-white rounded-lg py-4 font-sans text-sm font-medium uppercase tracking-wider transition-all hover:bg-mb-primary/90 active:scale-[0.98]"
                     >
                         Continuer
                     </button>
