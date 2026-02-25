@@ -1,0 +1,9 @@
+# Ignore web build artifacts
+dist/
+.expo/
+node_modules/
+
+# Ignore dev files
+*.log
+.env.local
+google-service-account.json

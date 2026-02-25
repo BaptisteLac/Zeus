@@ -1,206 +1,234 @@
-import { useState } from 'react';
-import { signUp, signInWithPassword, signOut } from '../lib/cloudStorage';
-import { X, Check, LogOut, Eye, EyeOff } from 'lucide-react';
+import { useState } from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  ScrollView,
+} from "react-native";
+import { signUp, signInWithPassword, signOut } from "@/lib/cloudStorage";
 
 interface AuthModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    userEmail?: string;
-    onAuthChange: () => void;
+  visible: boolean;
+  onClose: () => void;
+  userEmail?: string;
+  onAuthChange: () => void;
 }
 
-export function AuthModal({ isOpen, onClose, userEmail, onAuthChange }: AuthModalProps) {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+export default function AuthModal({
+  visible,
+  onClose,
+  userEmail,
+  onAuthChange,
+}: AuthModalProps) {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-    if (!isOpen) return null;
+  const resetForm = () => {
+    setEmail("");
+    setPassword("");
+    setError("");
+    setShowPassword(false);
+    setMode("signin");
+  };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
-        let result;
-        if (mode === 'signup') {
-            result = await signUp(email, password);
-        } else {
-            result = await signInWithPassword(email, password);
-        }
+  const handleSubmit = async () => {
+    if (!email.trim() || !password) return;
+    setLoading(true);
+    setError("");
 
-        if (result.success) {
-            // Connexion réussie
-            onAuthChange();
-            onClose();
-            // Reset form
-            setEmail('');
-            setPassword('');
-        } else {
-            setError(result.error || 'Erreur lors de l\'authentification');
-        }
+    const result =
+      mode === "signup"
+        ? await signUp(email.trim(), password)
+        : await signInWithPassword(email.trim(), password);
 
-        setLoading(false);
-    };
+    if (result.success) {
+      onAuthChange();
+      resetForm();
+      onClose();
+    } else {
+      setError(result.error || "Erreur d'authentification");
+    }
+    setLoading(false);
+  };
 
-    const handleSignOut = async () => {
-        setLoading(true);
-        await signOut();
-        setLoading(false);
-        onAuthChange();
-        onClose();
-    };
+  const handleSignOut = async () => {
+    setLoading(true);
+    await signOut();
+    setLoading(false);
+    onAuthChange();
+    onClose();
+  };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="relative w-full max-w-md mx-4 bg-background rounded-2xl shadow-2xl border border-border">
-                {/* Close button */}
-                <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 p-2 rounded-full hover:bg-mb-surface transition-colors"
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={handleClose}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1 justify-end"
+      >
+        <Pressable className="flex-1 bg-black/60" onPress={handleClose} />
+
+        <View className="bg-surface rounded-t-3xl border-t border-border">
+          {/* Handle */}
+          <View className="w-10 h-1 bg-border rounded-full self-center mt-3 mb-5" />
+
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+          >
+            {userEmail ? (
+              /* ── Connected state ─────────────────────────── */
+              <View className="items-center py-4 gap-3">
+                <View className="w-16 h-16 rounded-full bg-success/10 items-center justify-center mb-1">
+                  <Text className="text-3xl">✓</Text>
+                </View>
+                <Text className="text-foreground text-xl font-bold">Connecté</Text>
+                <Text className="text-foreground-muted text-sm">{userEmail}</Text>
+                <Text className="text-foreground-muted text-xs text-center mt-1">
+                  Vos données sont automatiquement sauvegardées dans le cloud.
+                </Text>
+
+                <Pressable
+                  onPress={handleSignOut}
+                  disabled={loading}
+                  className="w-full mt-4 py-4 rounded-xl bg-surface-elevated border border-border items-center active:opacity-70"
                 >
-                    <X className="w-5 h-5 text-mb-muted" />
-                </button>
+                  {loading ? (
+                    <ActivityIndicator color="#9CA3AF" />
+                  ) : (
+                    <Text className="text-foreground font-medium">Se déconnecter</Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : (
+              /* ── Sign in / sign up form ──────────────────── */
+              <>
+                {/* Tabs */}
+                <View className="flex-row bg-background p-1 rounded-xl mb-6 border border-border/50">
+                  {(["signin", "signup"] as const).map((m) => (
+                    <Pressable
+                      key={m}
+                      onPress={() => {
+                        setMode(m);
+                        setError("");
+                      }}
+                      className={`flex-1 py-2.5 rounded-lg items-center ${
+                        mode === m ? "bg-primary" : ""
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-medium ${
+                          mode === m ? "text-white" : "text-foreground-muted"
+                        }`}
+                      >
+                        {m === "signin" ? "Se connecter" : "Créer un compte"}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
 
-                <div className="p-8">
-                    {userEmail ? (
-                        // Already authenticated
-                        <div className="text-center">
-                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-mb-success/10 flex items-center justify-center">
-                                <Check className="w-8 h-8 text-mb-success" />
-                            </div>
-                            <h2 className="text-2xl font-display font-semibold text-mb-fg mb-2">
-                                Connecté
-                            </h2>
-                            <p className="text-mb-muted mb-6">
-                                {userEmail}
-                            </p>
-                            <p className="text-sm text-mb-muted mb-6">
-                                Vos données sont automatiquement sauvegardées dans le cloud.
-                            </p>
-                            <button
-                                onClick={handleSignOut}
-                                disabled={loading}
-                                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-mb-surface text-mb-fg rounded-xl font-medium hover:bg-mb-surface-raised transition-colors disabled:opacity-50"
-                            >
-                                <LogOut className="w-4 h-4" />
-                                Se déconnecter
-                            </button>
-                        </div>
-                    ) : (
-                        // Sign in/up form
-                        <div>
-                            {/* Tabs */}
-                            <div className="flex gap-2 mb-6 p-1 bg-mb-surface rounded-xl border border-white/5">
-                                <button
-                                    type="button"
-                                    onClick={() => setMode('signin')}
-                                    className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${mode === 'signin'
-                                        ? 'bg-mb-primary text-white shadow-sm'
-                                        : 'text-mb-muted hover:text-mb-fg'
-                                        }`}
-                                >
-                                    Se connecter
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setMode('signup')}
-                                    className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${mode === 'signup'
-                                        ? 'bg-mb-primary text-white shadow-sm'
-                                        : 'text-mb-muted hover:text-mb-fg'
-                                        }`}
-                                >
-                                    Créer un compte
-                                </button>
-                            </div>
+                {/* Email */}
+                <Text className="text-foreground-muted text-[11px] uppercase tracking-wider mb-2">
+                  Email
+                </Text>
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="votre@email.com"
+                  placeholderTextColor="#6B7280"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  className="bg-background border border-border rounded-xl px-4 py-3.5 text-foreground mb-4"
+                />
 
-                            <div className="text-center mb-6">
-                                <h2 className="text-2xl font-display font-semibold text-mb-fg mb-2">
-                                    {mode === 'signin' ? 'Connexion' : 'Créer un compte'}
-                                </h2 >
-                                <p className="text-mb-muted text-sm">
-                                    {mode === 'signin'
-                                        ? 'Connectez-vous à votre compte'
-                                        : 'Créez votre compte pour sauvegarder vos données'}
-                                </p>
-                            </div>
+                {/* Password */}
+                <Text className="text-foreground-muted text-[11px] uppercase tracking-wider mb-2">
+                  Mot de passe
+                </Text>
+                <View className="relative mb-1">
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="••••••••"
+                    placeholderTextColor="#6B7280"
+                    secureTextEntry={!showPassword}
+                    className="bg-background border border-border rounded-xl px-4 py-3.5 text-foreground"
+                    style={{ paddingRight: 52 }}
+                  />
+                  <Pressable
+                    onPress={() => setShowPassword((v) => !v)}
+                    className="absolute right-4 top-3.5 p-1"
+                  >
+                    <Text className="text-foreground-muted text-base">
+                      {showPassword ? "🙈" : "👁️"}
+                    </Text>
+                  </Pressable>
+                </View>
+                {mode === "signup" && (
+                  <Text className="text-foreground-muted text-xs mt-1 mb-4">
+                    Minimum 6 caractères
+                  </Text>
+                )}
 
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <label htmlFor="email" className="block text-sm font-medium text-mb-muted mb-2">
-                                        Email
-                                    </label>
-                                    <input
-                                        id="email"
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="votre@email.com"
-                                        required
-                                        className="w-full px-4 py-3 bg-mb-input border border-transparent rounded-xl text-mb-fg placeholder:text-mb-muted/50 focus:outline-none focus:ring-2 focus:ring-mb-primary/20 focus:border-mb-primary transition-colors"
-                                    />
-                                </div>
+                {/* Error */}
+                {error ? (
+                  <View className="bg-error/10 border border-error/20 rounded-xl px-4 py-3 mt-3 mb-1">
+                    <Text className="text-error text-sm">{error}</Text>
+                  </View>
+                ) : (
+                  <View className="h-4" />
+                )}
 
-                                <div>
-                                    <label htmlFor="password" className="block text-sm font-medium text-mb-muted mb-2">
-                                        Mot de passe
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            id="password"
-                                            type={showPassword ? 'text' : 'password'}
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            placeholder="••••••••"
-                                            required
-                                            minLength={6}
-                                            className="w-full px-4 py-3 pr-12 bg-mb-input border border-transparent rounded-xl text-mb-fg placeholder:text-mb-muted/50 focus:outline-none focus:ring-2 focus:ring-mb-primary/20 focus:border-mb-primary transition-colors"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-mb-muted hover:text-mb-fg transition-colors"
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff className="w-5 h-5" />
-                                            ) : (
-                                                <Eye className="w-5 h-5" />
-                                            )}
-                                        </button>
-                                    </div>
-                                    {mode === 'signup' && (
-                                        <p className="text-xs text-mb-muted/70 mt-1">
-                                            Minimum 6 caractères
-                                        </p>
-                                    )}
-                                </div>
+                {/* Submit */}
+                <Pressable
+                  onPress={handleSubmit}
+                  disabled={loading || !email.trim() || !password}
+                  className="mt-3 py-4 rounded-xl bg-primary items-center active:opacity-80"
+                  style={{ opacity: loading || !email.trim() || !password ? 0.5 : 1 }}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text className="text-white font-semibold">
+                      {mode === "signin" ? "Se connecter" : "Créer mon compte"}
+                    </Text>
+                  )}
+                </Pressable>
 
-                                {error && (
-                                    <p className="text-sm text-mb-error bg-mb-error/10 px-3 py-2 rounded-lg border border-mb-error/20">
-                                        {error}
-                                    </p>
-                                )}
+                <Text className="text-foreground-muted text-xs text-center mt-4">
+                  {mode === "signin"
+                    ? "Vos données sont sécurisées et synchronisées dans le cloud"
+                    : "Vos données seront automatiquement sauvegardées"}
+                </Text>
+              </>
+            )}
 
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full px-6 py-3 bg-mb-primary text-white rounded-xl font-medium hover:bg-mb-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {loading ? (mode === 'signin' ? 'Connexion...' : 'Création...') : (mode === 'signin' ? 'Se connecter' : 'Créer mon compte')}
-                                </button>
-
-                                <p className="text-xs text-mb-muted/70 text-center">
-                                    {mode === 'signin'
-                                        ? 'Vos données sont sécurisées et synchronisées dans le cloud'
-                                        : 'Vos données seront automatiquement sauvegardées'}
-                                </p>
-                            </form>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+            {/* Close */}
+            <Pressable onPress={handleClose} className="mt-4 py-3 items-center">
+              <Text className="text-foreground-muted text-sm">Fermer</Text>
+            </Pressable>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
 }

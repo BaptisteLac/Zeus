@@ -1,134 +1,164 @@
-import { Exercise, WorkoutEntry } from '@/lib/types';
-import { calculateProgression } from '@/lib/progression';
+import {
+  Modal,
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
+import * as Haptics from "expo-haptics";
+import { useEffect } from "react";
+import { Exercise, WorkoutEntry } from "@/lib/types";
+import { calculateProgression } from "@/lib/progression";
 
 interface SessionSummaryProps {
-    exercises: Exercise[];
-    workoutData: Record<string, WorkoutEntry[]>;
-    savedExercises: Set<string>;
-    session: string;
-    onClose: () => void;
+  visible: boolean;
+  exercises: Exercise[];
+  workoutData: Record<string, WorkoutEntry[]>;
+  savedExercises: Set<string>;
+  session: string;
+  onClose: () => void;
 }
 
 export default function SessionSummary({
-    exercises,
-    workoutData,
-    savedExercises,
-    session,
-    onClose,
+  visible,
+  exercises,
+  workoutData,
+  savedExercises,
+  session,
+  onClose,
 }: SessionSummaryProps) {
-    const completedCount = savedExercises.size;
-    const totalCount = exercises.length;
+  const completedCount = savedExercises.size;
+  const totalCount = exercises.length;
 
-    // Calculate total volume
-    const totalVolume = exercises.reduce((acc, ex) => {
-        const history = workoutData[ex.id] || [];
-        if (history.length === 0) return acc;
-        const latest = history[history.length - 1];
-        const repsTotal = latest.sets.reduce((a, b) => a + b, 0);
-        return acc + latest.charge * repsTotal;
-    }, 0);
+  const totalVolume = exercises.reduce((acc, ex) => {
+    const history = workoutData[ex.id] || [];
+    if (history.length === 0) return acc;
+    const latest = history[history.length - 1];
+    const repsTotal = latest.sets.reduce((a, b) => a + b, 0);
+    return acc + latest.charge * repsTotal;
+  }, 0);
 
-    // Get progressions
-    const progressions = exercises
-        .map((ex) => {
-            const history = workoutData[ex.id] || [];
-            const progression = calculateProgression(ex, history);
-            return progression ? { name: ex.name, ...progression } : null;
-        })
-        .filter(Boolean) as Array<{ name: string; type: string; message: string }>;
+  const progressions = exercises
+    .map((ex) => {
+      const history = workoutData[ex.id] || [];
+      const p = calculateProgression(ex, history);
+      return p ? { name: ex.name, type: p.type } : null;
+    })
+    .filter(Boolean) as Array<{ name: string; type: string }>;
 
-    const improvements = progressions.filter(
-        (p) => p.type === 'increase_charge' || p.type === 'increase_reps'
-    );
-    const stagnations = progressions.filter((p) => p.type === 'stagnation');
+  const improvements = progressions.filter(
+    (p) => p.type === "increase_charge" || p.type === "increase_reps"
+  );
+  const stagnations = progressions.filter((p) => p.type === "stagnation");
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-6">
-            <div className="bg-mb-surface border border-white/10 rounded-2xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                {/* Header */}
-                <div className="bg-mb-primary text-white px-6 py-5 text-center">
-                    <div className="text-3xl mb-2">🎉</div>
-                    <h2 className="font-display text-2xl font-light tracking-tight">
-                        Séance {session} terminée
-                    </h2>
-                    <p className="text-white/80 text-sm mt-1">
-                        {completedCount}/{totalCount} exercices complétés
-                    </p>
-                </div>
+  useEffect(() => {
+    if (visible) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [visible]);
 
-                {/* Stats */}
-                <div className="px-6 py-5 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-mb-bg rounded-lg p-4 text-center">
-                            <p className="font-sans text-[10px] uppercase tracking-wider text-mb-muted">
-                                Volume total
-                            </p>
-                            <p className="font-mono text-2xl text-mb-fg mt-1">
-                                {totalVolume.toLocaleString('fr-FR')}
-                                <span className="text-sm text-mb-muted ml-1">kg</span>
-                            </p>
-                        </div>
-                        <div className="bg-mb-bg rounded-lg p-4 text-center">
-                            <p className="font-sans text-[10px] uppercase tracking-wider text-mb-muted">
-                                Exercices
-                            </p>
-                            <p className="font-mono text-2xl text-mb-fg mt-1">
-                                {completedCount}/{totalCount}
-                            </p>
-                        </div>
-                    </div>
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={StyleSheet.absoluteFill} className="bg-background/95 items-center justify-center px-6">
+        <View className="w-full max-w-sm bg-surface rounded-2xl overflow-hidden border border-border">
+          {/* Header */}
+          <View className="bg-primary px-6 py-6 items-center">
+            <Text className="text-4xl mb-2">🎉</Text>
+            <Text className="text-white text-2xl font-semibold tracking-tight">
+              Séance {session} terminée
+            </Text>
+            <Text className="text-white/80 text-sm mt-1">
+              {completedCount}/{totalCount} exercices complétés
+            </Text>
+          </View>
 
-                    {/* Progressions */}
-                    {improvements.length > 0 && (
-                        <div>
-                            <p className="font-sans text-xs uppercase tracking-wider text-mb-muted mb-2">
-                                📈 Progressions
-                            </p>
-                            <div className="space-y-1.5">
-                                {improvements.map((p, i) => (
-                                    <div
-                                        key={i}
-                                        className="flex items-center gap-2 text-sm text-mb-fg bg-mb-success/10 border border-mb-success/20 rounded-md px-3 py-2"
-                                    >
-                                        <span className="text-mb-success">↑</span>
-                                        <span className="font-sans">{p.name}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+          <ScrollView
+            contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 20, gap: 16 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Stats grid */}
+            <View className="flex-row gap-3">
+              <View className="flex-1 bg-background rounded-xl p-4 items-center">
+                <Text className="text-foreground-muted text-[10px] uppercase tracking-wider">
+                  Volume total
+                </Text>
+                <Text className="text-foreground text-2xl font-mono mt-1">
+                  {totalVolume.toLocaleString("fr-FR")}
+                  <Text className="text-foreground-muted text-sm"> kg</Text>
+                </Text>
+              </View>
+              <View className="flex-1 bg-background rounded-xl p-4 items-center">
+                <Text className="text-foreground-muted text-[10px] uppercase tracking-wider">
+                  Exercices
+                </Text>
+                <Text className="text-foreground text-2xl font-mono mt-1">
+                  {completedCount}/{totalCount}
+                </Text>
+              </View>
+            </View>
 
-                    {/* Stagnations */}
-                    {stagnations.length > 0 && (
-                        <div>
-                            <p className="font-sans text-xs uppercase tracking-wider text-mb-muted mb-2">
-                                ⚠️ Points d'attention
-                            </p>
-                            <div className="space-y-1.5">
-                                {stagnations.map((p, i) => (
-                                    <div
-                                        key={i}
-                                        className="flex items-center gap-2 text-sm text-mb-fg bg-mb-secondary/10 border border-mb-secondary/20 rounded-md px-3 py-2"
-                                    >
-                                        <span className="text-mb-secondary">→</span>
-                                        <span className="font-sans">{p.name} — stagnation</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Action */}
-                <div className="px-6 pb-6">
-                    <button
-                        onClick={onClose}
-                        className="w-full bg-mb-primary text-white rounded-lg py-4 font-sans text-sm font-medium uppercase tracking-wider transition-all hover:bg-mb-primary/90 active:scale-[0.98]"
+            {/* Progressions */}
+            {improvements.length > 0 && (
+              <View>
+                <Text className="text-foreground-muted text-xs uppercase tracking-wider mb-2">
+                  📈 Progressions
+                </Text>
+                <View className="gap-1.5">
+                  {improvements.map((p, i) => (
+                    <View
+                      key={i}
+                      className="flex-row items-center gap-2 bg-success/10 border border-success/20 rounded-lg px-3 py-2"
                     >
-                        Continuer
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
+                      <Text className="text-success font-bold">↑</Text>
+                      <Text className="text-foreground text-sm">{p.name}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Stagnations */}
+            {stagnations.length > 0 && (
+              <View>
+                <Text className="text-foreground-muted text-xs uppercase tracking-wider mb-2">
+                  ⚠️ Points d'attention
+                </Text>
+                <View className="gap-1.5">
+                  {stagnations.map((p, i) => (
+                    <View
+                      key={i}
+                      className="flex-row items-center gap-2 bg-secondary/10 border border-secondary/20 rounded-lg px-3 py-2"
+                    >
+                      <Text className="text-secondary font-bold">→</Text>
+                      <Text className="text-foreground text-sm">
+                        {p.name} — stagnation
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* CTA */}
+          <View className="px-5 pb-6 pt-2">
+            <Pressable
+              onPress={onClose}
+              className="bg-primary rounded-xl py-4 items-center active:opacity-80"
+            >
+              <Text className="text-white font-semibold text-sm uppercase tracking-wider">
+                Continuer →
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 }
