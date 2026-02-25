@@ -29,6 +29,7 @@ import SessionHeader from "@/components/SessionHeader";
 import ExerciseCard from "@/components/ExerciseCard";
 import RestTimer from "@/components/RestTimer";
 import ExerciseFormSheet from "@/components/ExerciseFormSheet";
+import SessionSummary from "@/components/SessionSummary";
 
 const nextSession: Record<SessionType, SessionType> = { A: "B", B: "C", C: "A" };
 
@@ -47,6 +48,9 @@ export default function WorkoutScreen() {
   // Exercise form sheet
   const [showForm, setShowForm] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | undefined>();
+
+  // Session summary
+  const [showSummary, setShowSummary] = useState(false);
 
   // ── Load state ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -245,30 +249,31 @@ export default function WorkoutScreen() {
   const handleFinishSession = () => {
     const unsaved = exercises.filter((ex) => !savedExercises.has(ex.id));
 
-    const doFinish = () => {
-      setState((prev) => {
-        const updated = { ...prev, currentSession: nextSession[prev.currentSession] };
-        saveState(updated);
-        return updated;
-      });
-      setSavedExercises(new Set());
-      setExpandedExerciseId(null);
-      setTimer(null);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    };
-
     if (unsaved.length > 0) {
       Alert.alert(
         "Séance incomplète",
         `${unsaved.length} exercice(s) non sauvegardé(s). Terminer quand même ?`,
         [
           { text: "Annuler", style: "cancel" },
-          { text: "Terminer", onPress: doFinish },
+          { text: "Terminer", onPress: () => setShowSummary(true) },
         ]
       );
       return;
     }
-    doFinish();
+    setShowSummary(true);
+  };
+
+  const handleConfirmFinish = () => {
+    setShowSummary(false);
+    setState((prev) => {
+      const updated = { ...prev, currentSession: nextSession[prev.currentSession] };
+      saveState(updated);
+      return updated;
+    });
+    setSavedExercises(new Set());
+    setExpandedExerciseId(null);
+    setTimer(null);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const allSaved =
@@ -389,6 +394,16 @@ export default function WorkoutScreen() {
           }}
         />
       )}
+
+      {/* Session summary */}
+      <SessionSummary
+        visible={showSummary}
+        exercises={exercises}
+        workoutData={state.workoutData}
+        savedExercises={savedExercises}
+        session={state.currentSession}
+        onClose={handleConfirmFinish}
+      />
 
       {/* Exercise form sheet */}
       <ExerciseFormSheet
