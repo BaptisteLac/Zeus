@@ -38,11 +38,7 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
-      [
-        "expo-haptics",
-        {}
-      ]
+      "expo-secure-store"
     ],
     "web": {
       "bundler": "metro",
