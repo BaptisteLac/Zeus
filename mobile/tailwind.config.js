@@ -17,6 +17,12 @@ module.exports = {
           light: "#85B894",
           dark: "#557F62",
         },
+        // Secondary — Amber/Orange (stagnation indicators)
+        secondary: {
+          DEFAULT: "#D4A017",
+          light: "#F1C40F",
+          dark: "#B8891A",
+        },
         // Error
         error: {
           DEFAULT: "#C0392B",

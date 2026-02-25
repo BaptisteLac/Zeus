@@ -266,11 +266,13 @@ export default function ExerciseFormSheet({
                 {/* Autocomplete list */}
                 {showSuggestions && !isEditMode && (filteredCatalog.length > 0 || !exactMatch) && (
                   <View className="mt-1 bg-surface-elevated border border-border rounded-xl overflow-hidden">
-                    {filteredCatalog.slice(0, 5).map((entry) => (
+                    {filteredCatalog.slice(0, 5).map((entry, idx, arr) => (
                       <Pressable
                         key={entry.name}
                         onPress={() => handleSelectEntry(entry)}
-                        className="flex-row items-center justify-between px-4 py-3 border-b border-border/50 last:border-b-0 active:bg-white/5"
+                        className={`flex-row items-center justify-between px-4 py-3 active:bg-white/5 ${
+                          idx < arr.length - 1 ? "border-b border-border/50" : ""
+                        }`}
                       >
                         <View className="flex-1 mr-3">
                           <Text className="text-foreground text-sm font-medium">
