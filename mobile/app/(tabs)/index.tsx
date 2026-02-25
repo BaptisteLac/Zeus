@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import {
   saveState,
   computeBlock,
   getDefaultState,
-  resetState,
 } from "@/lib/storage";
 import {
   getExercisesForSession,
@@ -28,18 +27,28 @@ import { AppState, Exercise, ExerciseInput, SessionType } from "@/lib/types";
 
 import SessionHeader from "@/components/SessionHeader";
 import ExerciseCard from "@/components/ExerciseCard";
+import RestTimer from "@/components/RestTimer";
+import ExerciseFormSheet from "@/components/ExerciseFormSheet";
 
 const nextSession: Record<SessionType, SessionType> = { A: "B", B: "C", C: "A" };
 
 export default function WorkoutScreen() {
   const insets = useSafeAreaInsets();
+
   const [state, setState] = useState<AppState>(getDefaultState);
   const [isLoading, setIsLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | undefined>();
   const [savedExercises, setSavedExercises] = useState<Set<string>>(new Set());
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
 
-  // Load state
+  // Timer overlay
+  const [timer, setTimer] = useState<{ seconds: number; key: number } | null>(null);
+
+  // Exercise form sheet
+  const [showForm, setShowForm] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<Exercise | undefined>();
+
+  // ── Load state ──────────────────────────────────────────────────────────────
   useEffect(() => {
     loadState().then((loaded) => {
       if (!loaded.customExercises) {
@@ -47,22 +56,23 @@ export default function WorkoutScreen() {
         saveState(loaded);
       }
       const { block, week } = computeBlock(loaded.programStartDate);
-      setState({ ...loaded, currentBlock: block, weekNumber: week });
+      setState({ ...loaded, currentBlock: block as 1 | 2 | 3, weekNumber: week });
       setIsLoading(false);
     });
   }, []);
 
-  // Auth
+  // ── Auth ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
     getCurrentUser().then((user) => setUserEmail(user?.email));
 
-    const { data: { subscription } } = onAuthStateChange((authenticated, email) => {
+    const {
+      data: { subscription },
+    } = onAuthStateChange((authenticated, email) => {
       setUserEmail(email);
       if (authenticated) {
         loadState().then((loaded) => {
-          if (!loaded.customExercises) {
+          if (!loaded.customExercises)
             loaded = { ...loaded, customExercises: initCustomExercises() };
-          }
           setState(loaded);
         });
       }
@@ -71,6 +81,7 @@ export default function WorkoutScreen() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // ── Exercises for current session/block ──────────────────────────────────────
   const exercises = useMemo(
     () =>
       getExercisesForSession(
@@ -81,14 +92,14 @@ export default function WorkoutScreen() {
     [state.currentSession, state.currentBlock, state.customExercises]
   );
 
-  // Auto-expand first exercise
+  // Auto-expand first exercise when list changes
   useEffect(() => {
     if (exercises.length > 0 && expandedExerciseId === null) {
       setExpandedExerciseId(exercises[0].id);
     }
   }, [exercises]);
 
-  // ---- Handlers ----
+  // ── Handlers ─────────────────────────────────────────────────────────────────
 
   const handleSaveExercise = useCallback(
     (exerciseId: string, input: ExerciseInput) => {
@@ -114,10 +125,7 @@ export default function WorkoutScreen() {
       // Auto-expand next unsaved exercise
       const currentIndex = exercises.findIndex((ex) => ex.id === exerciseId);
       const nextUnsaved = exercises.find(
-        (ex, i) =>
-          i > currentIndex &&
-          !savedExercises.has(ex.id) &&
-          ex.id !== exerciseId
+        (ex, i) => i > currentIndex && !savedExercises.has(ex.id) && ex.id !== exerciseId
       );
       if (nextUnsaved) setExpandedExerciseId(nextUnsaved.id);
     },
@@ -136,9 +144,7 @@ export default function WorkoutScreen() {
         };
         const oldHistory = prev.workoutData[exerciseId] || [];
         const history =
-          oldHistory.length > 0
-            ? [...oldHistory.slice(0, -1), entry]
-            : [entry];
+          oldHistory.length > 0 ? [...oldHistory.slice(0, -1), entry] : [entry];
         const updated = {
           ...prev,
           workoutData: { ...prev.workoutData, [exerciseId]: history },
@@ -154,23 +160,59 @@ export default function WorkoutScreen() {
     setState((prev) => {
       const session = prev.currentSession;
       const currentCustom = prev.customExercises ?? initCustomExercises();
-      const name = currentCustom[session]?.find((e) => e.id === exerciseId)?.name;
       const updatedCustom = {
         ...currentCustom,
-        [session]: (currentCustom[session] || []).filter(
-          (ex) => ex.id !== exerciseId
-        ),
+        [session]: (currentCustom[session] || []).filter((ex) => ex.id !== exerciseId),
       };
       const updated = { ...prev, customExercises: updatedCustom };
       saveState(updated);
-      setSavedExercises((prev) => {
-        const next = new Set(prev);
-        next.delete(exerciseId);
-        return next;
-      });
       return updated;
     });
+    setSavedExercises((prev) => {
+      const next = new Set(prev);
+      next.delete(exerciseId);
+      return next;
+    });
   }, []);
+
+  const handleAddExercise = useCallback(
+    (exerciseData: Omit<Exercise, "id">) => {
+      setState((prev) => {
+        const session = prev.currentSession;
+        const currentCustom = prev.customExercises ?? initCustomExercises();
+        const sessionExercises = currentCustom[session] || [];
+        const newId = generateExerciseId(session, sessionExercises);
+        const newExercise: Exercise = { id: newId, ...exerciseData };
+        const updatedCustom = {
+          ...currentCustom,
+          [session]: [...sessionExercises, newExercise],
+        };
+        const updated = { ...prev, customExercises: updatedCustom };
+        saveState(updated);
+        return updated;
+      });
+    },
+    []
+  );
+
+  const handleEditExerciseDefinition = useCallback(
+    (exerciseId: string, exerciseData: Omit<Exercise, "id">) => {
+      setState((prev) => {
+        const session = prev.currentSession;
+        const currentCustom = prev.customExercises ?? initCustomExercises();
+        const updatedCustom = {
+          ...currentCustom,
+          [session]: (currentCustom[session] || []).map((ex) =>
+            ex.id === exerciseId ? { ...ex, ...exerciseData } : ex
+          ),
+        };
+        const updated = { ...prev, customExercises: updatedCustom };
+        saveState(updated);
+        return updated;
+      });
+    },
+    []
+  );
 
   const handleChangeSession = useCallback(
     (session: SessionType) => {
@@ -205,15 +247,13 @@ export default function WorkoutScreen() {
 
     const doFinish = () => {
       setState((prev) => {
-        const updated = {
-          ...prev,
-          currentSession: nextSession[prev.currentSession],
-        };
+        const updated = { ...prev, currentSession: nextSession[prev.currentSession] };
         saveState(updated);
         return updated;
       });
       setSavedExercises(new Set());
       setExpandedExerciseId(null);
+      setTimer(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     };
 
@@ -234,100 +274,139 @@ export default function WorkoutScreen() {
   const allSaved =
     exercises.length > 0 && exercises.every((ex) => savedExercises.has(ex.id));
 
+  // ── Render ───────────────────────────────────────────────────────────────────
+
   if (isLoading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
         <ActivityIndicator color="#C0694A" size="large" />
-        <Text className="text-foreground-muted text-sm mt-3">Chargement...</Text>
+        <Text className="text-foreground-muted text-sm mt-3">Chargement…</Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top"] as const}>
-      {/* Sticky header */}
-      <SessionHeader
-        session={state.currentSession}
-        block={state.currentBlock}
-        week={state.weekNumber}
-        completedCount={savedExercises.size}
-        totalCount={exercises.length}
-        onChangeSession={handleChangeSession}
-        userEmail={userEmail}
-        onAuthClick={() => {
-          // TODO: auth modal
-          Alert.alert("Compte", userEmail ? `Connecté : ${userEmail}` : "Non connecté");
-        }}
-      />
+    <View className="flex-1 bg-background">
+      <SafeAreaView className="flex-1" edges={["top"] as const}>
+        {/* Sticky header */}
+        <SessionHeader
+          session={state.currentSession}
+          block={state.currentBlock}
+          week={state.weekNumber}
+          completedCount={savedExercises.size}
+          totalCount={exercises.length}
+          onChangeSession={handleChangeSession}
+          userEmail={userEmail}
+          onAuthClick={() =>
+            Alert.alert(
+              "Compte",
+              userEmail ? `Connecté : ${userEmail}` : "Non connecté"
+            )
+          }
+        />
 
-      {/* Exercise list */}
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 12 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {exercises.map((exercise) => (
-          <ExerciseCard
-            key={exercise.id}
-            exercise={exercise}
-            history={state.workoutData[exercise.id] || []}
-            onSave={(input: ExerciseInput) => handleSaveExercise(exercise.id, input)}
-            onUpdate={(input: ExerciseInput) => handleUpdateExercise(exercise.id, input)}
-            onStartTimer={() => {
-              // TODO: timer overlay
-            }}
-            onEditDefinition={() => {
-              // TODO: exercise form sheet
-              Alert.alert("Modifier", exercise.name);
-            }}
-            onDelete={() => handleDeleteExercise(exercise.id)}
-            saved={savedExercises.has(exercise.id)}
-            isExpanded={expandedExerciseId === exercise.id}
-            onToggle={() =>
-              setExpandedExerciseId(
-                expandedExerciseId === exercise.id ? null : exercise.id
-              )
-            }
-          />
-        ))}
-
-        {/* Add exercise button — TODO */}
-        <Pressable
-          className="border-2 border-dashed border-primary/20 rounded-xl py-4 items-center mt-2 active:border-primary/50"
-          onPress={() => Alert.alert("Ajouter", "Formulaire d'ajout — à venir")}
+        {/* Exercise list */}
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 12 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text className="text-primary/50 text-2xl font-light">+</Text>
-        </Pressable>
-      </ScrollView>
+          {exercises.map((exercise) => (
+            <ExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              history={state.workoutData[exercise.id] || []}
+              onSave={(input: ExerciseInput) => handleSaveExercise(exercise.id, input)}
+              onUpdate={(input: ExerciseInput) => handleUpdateExercise(exercise.id, input)}
+              onStartTimer={(seconds) =>
+                setTimer({ seconds, key: Date.now() })
+              }
+              onEditDefinition={() => {
+                setEditingExercise(exercise);
+                setShowForm(true);
+              }}
+              onDelete={() => handleDeleteExercise(exercise.id)}
+              saved={savedExercises.has(exercise.id)}
+              isExpanded={expandedExerciseId === exercise.id}
+              onToggle={() =>
+                setExpandedExerciseId(
+                  expandedExerciseId === exercise.id ? null : exercise.id
+                )
+              }
+            />
+          ))}
 
-      {/* Finish session button */}
-      <View
-        className="absolute bottom-0 left-0 right-0 px-5 bg-gradient-to-t from-background"
-        style={{ paddingBottom: insets.bottom + 12, paddingTop: 16 }}
-      >
-        <Pressable
-          onPress={handleFinishSession}
-          disabled={savedExercises.size === 0}
-          className={`rounded-xl py-4 items-center ${
-            allSaved
-              ? "bg-success"
-              : savedExercises.size > 0
-              ? "bg-primary"
-              : "bg-surface border border-border"
-          }`}
+          {/* Add exercise */}
+          <Pressable
+            className="border-2 border-dashed border-primary/20 rounded-xl py-4 items-center mt-2 active:border-primary/50"
+            onPress={() => {
+              setEditingExercise(undefined);
+              setShowForm(true);
+            }}
+          >
+            <Text className="text-primary/50 text-2xl font-light">+</Text>
+          </Pressable>
+        </ScrollView>
+
+        {/* Finish session button */}
+        <View
+          className="absolute bottom-0 left-0 right-0 px-5"
+          style={{ paddingBottom: insets.bottom + 12, paddingTop: 16 }}
         >
-          <Text
-            className={`font-semibold text-[13px] uppercase tracking-wider ${
-              savedExercises.size === 0 ? "text-foreground-muted" : "text-white"
+          <Pressable
+            onPress={handleFinishSession}
+            disabled={savedExercises.size === 0}
+            className={`rounded-xl py-4 items-center ${
+              allSaved
+                ? "bg-success"
+                : savedExercises.size > 0
+                ? "bg-primary"
+                : "bg-surface border border-border"
             }`}
           >
-            {allSaved
-              ? `✓ Terminer la séance ${state.currentSession}`
-              : `Terminer la séance ${state.currentSession} (${savedExercises.size}/${exercises.length})`}
-          </Text>
-        </Pressable>
-      </View>
-    </SafeAreaView>
+            <Text
+              className={`font-semibold text-[13px] uppercase tracking-wider ${
+                savedExercises.size === 0 ? "text-foreground-muted" : "text-white"
+              }`}
+            >
+              {allSaved
+                ? `✓ Terminer la séance ${state.currentSession}`
+                : `Terminer la séance ${state.currentSession} (${savedExercises.size}/${exercises.length})`}
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+
+      {/* Rest timer overlay — renders above everything */}
+      {timer && (
+        <RestTimer
+          key={timer.key}
+          initialSeconds={timer.seconds}
+          onDismiss={() => setTimer(null)}
+          onComplete={() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          }}
+        />
+      )}
+
+      {/* Exercise form sheet */}
+      <ExerciseFormSheet
+        open={showForm}
+        onOpenChange={setShowForm}
+        exercise={editingExercise}
+        catalog={getAllExerciseCatalog(state.customExercises)}
+        onSubmit={(data) => {
+          if (editingExercise) {
+            handleEditExerciseDefinition(editingExercise.id, data);
+          } else {
+            handleAddExercise(data);
+          }
+        }}
+        onDelete={
+          editingExercise ? () => handleDeleteExercise(editingExercise.id) : undefined
+        }
+      />
+    </View>
   );
 }
