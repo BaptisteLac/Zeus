@@ -9,12 +9,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { loadState, saveState, resetState, computeBlock } from "@/lib/storage";
-import {
-  getCurrentUser,
-  signOut,
-  onAuthStateChange,
-} from "@/lib/cloudStorage";
+import { getCurrentUser, onAuthStateChange } from "@/lib/cloudStorage";
 import { AppState } from "@/lib/types";
+import AuthModal from "@/components/AuthModal";
 
 function SectionLabel({ label }: { label: string }) {
   return (
@@ -59,6 +56,7 @@ export default function SettingsScreen() {
   const [appState, setAppState] = useState<AppState | null>(null);
   const [userEmail, setUserEmail] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
+  const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
     Promise.all([loadState(), getCurrentUser()]).then(([state, user]) => {
@@ -76,26 +74,8 @@ export default function SettingsScreen() {
   }, []);
 
   const handleAuth = useCallback(() => {
-    if (userEmail) {
-      Alert.alert("Déconnexion", `Connecté en tant que ${userEmail}`, [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Se déconnecter",
-          style: "destructive",
-          onPress: async () => {
-            await signOut();
-            setUserEmail(undefined);
-          },
-        },
-      ]);
-    } else {
-      Alert.alert(
-        "Connexion",
-        "La connexion via formulaire natif sera disponible dans la prochaine version.",
-        [{ text: "OK" }]
-      );
-    }
-  }, [userEmail]);
+    setShowAuth(true);
+  }, []);
 
   const handleReset = useCallback(() => {
     Alert.alert(
@@ -226,6 +206,15 @@ export default function SettingsScreen() {
           <Row label="Zeus — Tracker musculation" value="v1.0" />
         </View>
       </ScrollView>
+
+      <AuthModal
+        visible={showAuth}
+        onClose={() => setShowAuth(false)}
+        userEmail={userEmail}
+        onAuthChange={() => {
+          getCurrentUser().then((user) => setUserEmail(user?.email ?? undefined));
+        }}
+      />
     </SafeAreaView>
   );
 }

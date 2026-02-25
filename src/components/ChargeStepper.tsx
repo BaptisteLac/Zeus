@@ -12,7 +12,7 @@ interface ChargeStepperProps {
 export function ChargeStepper({
   value,
   onChange,
-  step = 2.5,
+  step = 0.5,
   min = 0,
   max = 500,
 }: ChargeStepperProps) {

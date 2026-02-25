@@ -30,6 +30,7 @@ import ExerciseCard from "@/components/ExerciseCard";
 import RestTimer from "@/components/RestTimer";
 import ExerciseFormSheet from "@/components/ExerciseFormSheet";
 import SessionSummary from "@/components/SessionSummary";
+import AuthModal from "@/components/AuthModal";
 
 const nextSession: Record<SessionType, SessionType> = { A: "B", B: "C", C: "A" };
 
@@ -51,6 +52,9 @@ export default function WorkoutScreen() {
 
   // Session summary
   const [showSummary, setShowSummary] = useState(false);
+
+  // Auth modal
+  const [showAuth, setShowAuth] = useState(false);
 
   // ── Load state ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -302,12 +306,7 @@ export default function WorkoutScreen() {
           totalCount={exercises.length}
           onChangeSession={handleChangeSession}
           userEmail={userEmail}
-          onAuthClick={() =>
-            Alert.alert(
-              "Compte",
-              userEmail ? `Connecté : ${userEmail}` : "Non connecté"
-            )
-          }
+          onAuthClick={() => setShowAuth(true)}
         />
 
         {/* Exercise list */}
@@ -403,6 +402,16 @@ export default function WorkoutScreen() {
         savedExercises={savedExercises}
         session={state.currentSession}
         onClose={handleConfirmFinish}
+      />
+
+      {/* Auth modal */}
+      <AuthModal
+        visible={showAuth}
+        onClose={() => setShowAuth(false)}
+        userEmail={userEmail}
+        onAuthChange={() => {
+          getCurrentUser().then((user) => setUserEmail(user?.email));
+        }}
       />
 
       {/* Exercise form sheet */}

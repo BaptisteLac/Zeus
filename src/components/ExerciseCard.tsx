@@ -1,90 +1,52 @@
-// TODO: Refactor this component into smaller pieces:
-// - ExerciseBlock (container, header)
-// - SerieCard (individual set row)
-// - ProgressionBadge (logic for progression display)
-
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { Exercise, WorkoutEntry, ExerciseInput } from '@/lib/types';
-import { calculateProgression } from '@/lib/progression';
-import { Check, ChevronDown, Dumbbell, MoreVertical, RotateCw, Trash2, History, Pencil } from "lucide-react";
-import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { cn } from '@/lib/utils';
-import { ChargeStepper } from './ui/ChargeStepper';
+import { useState, useMemo, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  TextInput,
+  Alert,
+  ScrollView,
+} from "react-native";
+import * as Haptics from "expo-haptics";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+} from "react-native-reanimated";
+import { Exercise, WorkoutEntry, ExerciseInput } from "@/lib/types";
+import { calculateProgression } from "@/lib/progression";
+import { ChargeStepper } from "./ChargeStepper";
+import { RIRSelector } from "./RIRSelector";
+import { OptionsSheet } from "./OptionsSheet";
 
 interface ExerciseCardProps {
-  index: number;
   exercise: Exercise;
   history: WorkoutEntry[];
   onSave: (input: ExerciseInput) => void;
   onUpdate?: (input: ExerciseInput) => void;
   onStartTimer?: (seconds: number) => void;
   onEditDefinition?: () => void;
+  onDelete?: () => void;
   saved: boolean;
   isExpanded?: boolean;
   onToggle?: () => void;
-  onDelete?: () => void;
 }
 
 export default function ExerciseCard({
-  index,
   exercise,
   history,
   onSave,
   onUpdate,
   onStartTimer,
   onEditDefinition,
-  saved,
-  isExpanded = true,
-  onToggle,
   onDelete,
+  saved,
+  isExpanded = false,
+  onToggle,
 }: ExerciseCardProps) {
-  // Long-press detection (supports both touch and mouse)
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressTriggered = useRef(false);
-  const isTouchDevice = useRef(false);
-
-  const startLongPress = () => {
-    longPressTriggered.current = false;
-    longPressTimerRef.current = setTimeout(() => {
-      longPressTriggered.current = true;
-      if (onEditDefinition) {
-        if (navigator.vibrate) navigator.vibrate(50);
-        onEditDefinition();
-      }
-    }, 500);
-  };
-
-  const endLongPress = (triggerToggle: boolean) => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    if (longPressTriggered.current) {
-      longPressTriggered.current = false;
-      return;
-    }
-    if (triggerToggle) onToggle?.();
-  };
-
-  const cancelLongPress = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    longPressTriggered.current = false;
-  };
-
-  // Touch handlers
-  const handleHeaderTouchStart = () => { isTouchDevice.current = true; startLongPress(); };
-  const handleHeaderTouchEnd = () => endLongPress(true);
-  const handleHeaderTouchCancel = () => cancelLongPress();
-
-  // Mouse handlers (only fire on non-touch devices)
-  const handleHeaderMouseDown = () => { if (!isTouchDevice.current) startLongPress(); };
-  const handleHeaderMouseUp = () => { if (!isTouchDevice.current) endLongPress(true); };
-  const handleHeaderMouseLeave = () => { if (!isTouchDevice.current) cancelLongPress(); };
   const lastEntry = history.length > 0 ? history[history.length - 1] : null;
+
   const progression = useMemo(
     () => calculateProgression(exercise, history),
     [exercise, history]
@@ -93,40 +55,32 @@ export default function ExerciseCard({
   const defaultCharge = progression
     ? progression.nextCharge
     : lastEntry
-      ? lastEntry.charge
-      : 0;
+    ? lastEntry.charge
+    : 0;
 
   const [charge, setCharge] = useState(defaultCharge);
   const [sets, setSets] = useState<number[]>(
     Array.from({ length: exercise.sets }, (_, i) =>
-      lastEntry && lastEntry.sets[i] !== undefined ? lastEntry.sets[i] : 0
+      lastEntry?.sets[i] !== undefined ? lastEntry.sets[i] : 0
     )
   );
   const [rir, setRir] = useState(lastEntry ? lastEntry.rir : 1);
   const [modified, setModified] = useState(false);
   const [savedValues, setSavedValues] = useState<ExerciseInput | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
-  // Set Stepper state
   const [activeSetIndex, setActiveSetIndex] = useState(0);
-  const [completedSets, setCompletedSets] = useState<Set<number>>(() => {
-    if (saved) return new Set(Array.from({ length: exercise.sets }, (_, i) => i));
-    return new Set();
-  });
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [completedSets, setCompletedSets] = useState<Set<number>>(
+    () => saved ? new Set(Array.from({ length: exercise.sets }, (_, i) => i)) : new Set()
+  );
+  const [showOptions, setShowOptions] = useState(false);
 
-  // Scroll card into view when expanded
+  // Expand/collapse animation
+  const expandAnim = useSharedValue(isExpanded ? 1 : 0);
+
   useEffect(() => {
-    if (!isExpanded || !cardRef.current) return;
-    const timer = setTimeout(() => {
-      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-    return () => clearTimeout(timer);
+    expandAnim.value = withTiming(isExpanded ? 1 : 0, { duration: 280 });
   }, [isExpanded]);
 
-  // Resync sets array when exercise definition changes (e.g. number of sets edited)
+  // Resync sets when exercise definition changes
   useEffect(() => {
     setSets((prev) => {
       if (prev.length === exercise.sets) return prev;
@@ -141,57 +95,29 @@ export default function ExerciseCard({
     });
   }, [exercise.sets]);
 
+  // Track modifications after save
+  useEffect(() => {
+    if (saved && savedValues) {
+      const changed =
+        charge !== savedValues.charge ||
+        rir !== savedValues.rir ||
+        sets.some((s, i) => s !== savedValues.sets[i]);
+      setModified(changed);
+    }
+  }, [charge, sets, rir, saved, savedValues]);
+
   const totalReps = sets.reduce((a, b) => a + b, 0);
   const filledSetsCount = sets.filter((s) => s > 0).length;
   const allSetsFilled = filledSetsCount === exercise.sets;
   const canSave = charge > 0 && sets.some((s) => s > 0);
 
-  // Track when inputs change after save
-  useEffect(() => {
-    if (saved && savedValues) {
-      const hasChanged =
-        charge !== savedValues.charge ||
-        rir !== savedValues.rir ||
-        sets.some((s, i) => s !== savedValues.sets[i]);
-      setModified(hasChanged);
-    }
-  }, [charge, sets, rir, saved, savedValues]);
-
-  const handleSetChange = (i: number, value: string) => {
-    const n = Math.max(0, parseInt(value) || 0);
+  const handleSetChange = (i: number, val: string) => {
+    const n = Math.max(0, parseInt(val) || 0);
     setSets((prev) => {
       const next = [...prev];
       next[i] = n;
       return next;
     });
-  };
-
-  const handleChipFocus = (i: number) => {
-    setActiveSetIndex(i);
-  };
-
-  const handleValidateSet = (setIndex: number) => {
-    // Mark the set as completed
-    setCompletedSets((prev) => {
-      const next = new Set(prev);
-      next.add(setIndex);
-      return next;
-    });
-
-    // Move to next uncompleted set
-    const nextIndex = findNextUncompletedSet(setIndex);
-    if (nextIndex !== null) {
-      setActiveSetIndex(nextIndex);
-      // Focus the next input after a small delay for DOM update
-      setTimeout(() => {
-        inputRefs.current[nextIndex]?.focus();
-      }, 100);
-    }
-
-    // Start timer
-    if (onStartTimer) {
-      onStartTimer(exercise.rest);
-    }
   };
 
   const findNextUncompletedSet = (afterIndex: number): number | null => {
@@ -201,494 +127,383 @@ export default function ExerciseCard({
     return null;
   };
 
-  const handleSaveAll = () => {
-    if (!canSave) return;
-    const input = { charge, sets, rir };
-    if (modified && onUpdate) {
-      onUpdate(input);
-      setSavedValues(input);
-      setModified(false);
-    } else {
-      onSave(input);
-      setSavedValues(input);
-      // Mark all as completed
-      setCompletedSets(new Set(sets.map((_, i) => i)));
-    }
+  const handleValidateSet = (setIndex: number) => {
+    setCompletedSets((prev) => {
+      const next = new Set(prev);
+      next.add(setIndex);
+      return next;
+    });
+    const nextIdx = findNextUncompletedSet(setIndex);
+    if (nextIdx !== null) setActiveSetIndex(nextIdx);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onStartTimer?.(exercise.rest);
   };
 
-  const handleValidateAndSave = () => {
+  const handleMainAction = () => {
     if (!canSave) return;
 
-    const currentSetHasReps = sets[activeSetIndex] > 0;
-    const isLastSet = completedSets.size === exercise.sets - 1 && currentSetHasReps;
-
     if (saved && modified) {
-      // Modification mode
       const input = { charge, sets, rir };
-      if (onUpdate) onUpdate(input);
+      onUpdate?.(input);
       setSavedValues(input);
       setModified(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return;
     }
 
     if (allSetsFilled && completedSets.size === 0) {
-      // Free-fill mode: all sets filled at once, save everything
-      handleSaveAll();
+      const input = { charge, sets, rir };
+      onSave(input);
+      setSavedValues(input);
+      setCompletedSets(new Set(sets.map((_, i) => i)));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return;
     }
 
+    const currentSetHasReps = sets[activeSetIndex] > 0;
+    const isLastSet =
+      completedSets.size === exercise.sets - 1 && currentSetHasReps;
+
     if (isLastSet || (allSetsFilled && completedSets.size > 0)) {
-      // Last set or all filled after some individual validations → save everything
       handleValidateSet(activeSetIndex);
       const input = { charge, sets, rir };
       onSave(input);
       setSavedValues(input);
       setCompletedSets(new Set(sets.map((_, i) => i)));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return;
     }
 
     if (currentSetHasReps) {
-      // Validate individual set + start timer
       handleValidateSet(activeSetIndex);
     }
   };
 
-  // Determine button state
   const getButtonConfig = () => {
     if (saved && !modified) {
-      return {
-        label: 'Enregistré ✓',
-        style: 'bg-mb-success text-white',
-        disabled: false,
-      };
+      return { label: "Enregistré ✓", variant: "success", disabled: false };
     }
     if (saved && modified) {
-      return {
-        label: 'Modifier',
-        style: 'bg-mb-primary hover:bg-mb-primary/90 text-white',
-        disabled: false,
-      };
+      return { label: "Modifier", variant: "primary", disabled: false };
     }
     if (!canSave) {
-      return {
-        label: 'Enregistrer',
-        style: 'bg-mb-muted/20 text-mb-muted cursor-not-allowed',
-        disabled: true,
-      };
+      return { label: "Enregistrer", variant: "disabled", disabled: true };
     }
-    // All sets filled and none validated individually → global save
     if (allSetsFilled && completedSets.size === 0) {
-      return {
-        label: 'Enregistrer l\'exercice',
-        style: 'bg-mb-success hover:bg-mb-success/90 text-white shadow-lg shadow-mb-success/20',
-        disabled: false,
-      };
+      return { label: "Enregistrer l'exercice", variant: "success", disabled: false };
     }
-    // Last remaining set
-    const remainingSets = exercise.sets - completedSets.size;
-    if (remainingSets === 1 && sets[activeSetIndex] > 0) {
-      return {
-        label: 'Terminer l\'exercice ✓',
-        style: 'bg-mb-success hover:bg-mb-success/90 text-white',
-        disabled: false,
-      };
+    const remaining = exercise.sets - completedSets.size;
+    if (remaining === 1 && sets[activeSetIndex] > 0) {
+      return { label: "Terminer l'exercice ✓", variant: "success", disabled: false };
     }
-    // Active set has reps → validate + timer
     if (sets[activeSetIndex] > 0) {
       return {
         label: `Valider S${activeSetIndex + 1} & Repos ⏱`,
-        style: 'bg-mb-primary hover:bg-mb-primary/90 text-white shadow-lg shadow-mb-primary/20',
+        variant: "primary",
         disabled: false,
       };
     }
     return {
       label: `Remplir S${activeSetIndex + 1}`,
-      style: 'bg-mb-muted/20 text-mb-muted cursor-not-allowed',
+      variant: "disabled",
       disabled: true,
     };
   };
 
-
-  const getChipState = (i: number): 'active' | 'done' | 'pending' => {
-    if (completedSets.has(i) && i !== activeSetIndex) return 'done';
-    if (i === activeSetIndex) return 'active';
-    return 'pending';
+  const getChipState = (i: number): "active" | "done" | "pending" => {
+    if (completedSets.has(i) && i !== activeSetIndex) return "done";
+    if (i === activeSetIndex) return "active";
+    return "pending";
   };
 
-  const chipStyles = {
-    active:
-      'border border-mb-primary ring-1 ring-mb-primary bg-mb-input text-mb-primary',
-    done: 'border border-mb-success/40 bg-mb-success/10 text-mb-success',
-    pending: 'border border-transparent bg-mb-input text-mb-muted',
-  };
-
-  const labelStyles = {
-    active: 'text-mb-primary font-semibold',
-    done: 'text-mb-success font-semibold',
-    pending: 'text-mb-muted',
-  };
-
-  const getStatusStyles = () => {
-    if (saved) return "bg-mb-surface/50 border-t border-white/5 opacity-60";
-    if (isExpanded) return "bg-mb-surface border-t border-white/10 my-4 shadow-none";
-    return "bg-mb-surface border-t border-white/5 hover:bg-mb-surface/90 mb-3 transition-colors";
-  };
-
-  const statusBadge = saved ? (
-    <span className="px-2.5 py-0.5 rounded-full bg-mb-success/10 text-mb-success text-xs font-medium border border-mb-success/20 flex items-center gap-1">
-      <Check className="w-3 h-3" />
-      VALIDÉ
-    </span>
-  ) : isExpanded ? (
-    <span className="px-2.5 py-0.5 rounded-full bg-mb-primary/10 text-mb-primary text-xs font-medium border border-mb-primary/20">
-      EN COURS
-    </span>
-  ) : (
-    <span className="px-2.5 py-0.5 rounded-full bg-mb-surface-raised text-mb-muted text-xs font-medium border border-white/5">
-      EN ATTENTE
-    </span>
-  );
   const buttonConfig = getButtonConfig();
 
+  const confirmDelete = () => {
+    Alert.alert(
+      `Supprimer ${exercise.name} ?`,
+      "L'exercice sera retiré de ta séance. L'historique de performances sera conservé.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: () => onDelete?.(),
+        },
+      ]
+    );
+  };
+
+  // Card border color
+  const cardBorderClass = saved
+    ? "border-success/20"
+    : isExpanded
+    ? "border-primary/30"
+    : "border-border";
+
+  // Status badge
+  const statusLabel = saved ? "VALIDÉ" : isExpanded ? "EN COURS" : "EN ATTENTE";
+  const statusClass = saved
+    ? "bg-success/10 border-success/20"
+    : isExpanded
+    ? "bg-primary/10 border-primary/20"
+    : "bg-surface border-border";
+  const statusTextClass = saved
+    ? "text-success"
+    : isExpanded
+    ? "text-primary"
+    : "text-foreground-muted";
+
   return (
-    <div
-      ref={cardRef}
-      style={{ scrollMarginTop: '220px' }}
-      className={cn(
-        "relative overflow-hidden transition-all duration-500 ease-smooth rounded-2xl",
-        getStatusStyles()
-      )}
-    >
-      <div
-        className={cn(
-          "px-4 py-4 flex flex-col gap-2 transition-all duration-300",
-          isExpanded ? "pb-2" : ""
-        )}
-        onClick={() => !isExpanded && onToggle?.()}
+    <>
+      <View
+        className={`rounded-2xl border overflow-hidden ${cardBorderClass} ${
+          saved ? "opacity-70" : ""
+        }`}
+        style={{ backgroundColor: "#1C1C1E" }}
       >
-        <div className="flex justify-between items-start gap-4">
-          <div className="flex-1 min-w-0" onClick={() => isExpanded && onToggle?.()}>
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-start justify-between w-full">
-                <h3 className={cn(
-                  "font-display uppercase tracking-wide text-lg leading-tight pr-2 transition-colors duration-300",
-                  isExpanded ? "text-primary font-semibold" : "text-foreground font-medium"
-                )}>
-                  {exercise.name}
-                </h3>
-                {isExpanded ? (
-                  <div className="flex items-center gap-2">
-                    {/* More Options Drawer Trigger */}
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-                        <DrawerTrigger asChild>
-                          <button
-                            className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-surface hover:text-foreground transition-colors"
-                          >
-                            <MoreVertical className="w-5 h-5" />
-                          </button>
-                        </DrawerTrigger>
-                        <DrawerContent className="bg-mb-bg border-t border-white/10 px-6 pb-8">
-                          <DrawerHeader className="text-left px-0 pt-6 pb-4">
-                            <DrawerTitle className="font-display text-2xl font-light tracking-tight text-mb-fg">
-                              {exercise.name}
-                            </DrawerTitle>
-                            <DrawerDescription className="text-mb-muted">
-                              Gère cet exercice
-                            </DrawerDescription>
-                          </DrawerHeader>
-                          <div className="flex flex-col gap-3">
-                            <button
-                              onClick={() => {
-                                setDrawerOpen(false);
-                                onEditDefinition?.();
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-4 bg-mb-surface rounded-xl border border-white/5 hover:bg-white/5 active:scale-[0.98] transition-all"
-                            >
-                              <span className="w-8 h-8 rounded-full bg-mb-primary/10 flex items-center justify-center text-mb-primary">
-                                <Pencil className="w-4 h-4" />
-                              </span>
-                              <span className="font-medium text-mb-fg">Modifier l'exercice</span>
-                            </button>
+        {/* Header — tap to toggle, long-press to edit */}
+        <Pressable
+          onPress={() => onToggle?.()}
+          onLongPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            onEditDefinition?.();
+          }}
+          delayLongPress={500}
+          className="px-4 pt-4 pb-3"
+        >
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1 pr-3">
+              <Text
+                className={`text-base font-semibold uppercase tracking-wide leading-tight ${
+                  isExpanded ? "text-primary" : "text-foreground"
+                }`}
+              >
+                {exercise.name}
+              </Text>
+              {isExpanded && (
+                <Text className="text-foreground-muted text-xs mt-1">
+                  {exercise.repsMin}–{exercise.repsMax} reps · RIR {exercise.rir}
+                </Text>
+              )}
+            </View>
 
-                            {onDelete && (
-                              <button
-                                onClick={() => setShowDeleteConfirm(true)}
-                                className="w-full flex items-center gap-3 px-4 py-4 bg-mb-error/5 rounded-xl border border-mb-error/10 hover:bg-mb-error/10 active:scale-[0.98] transition-all text-mb-error"
-                              >
-                                <span className="w-8 h-8 rounded-full bg-mb-error/10 flex items-center justify-center text-mb-error">
-                                  <Trash2 className="w-4 h-4" />
-                                </span>
-                                <span className="font-medium">Supprimer l'exercice</span>
-                              </button>
-                            )}
-                          </div>
-                          <DrawerFooter className="px-0 pt-4">
-                            <DrawerClose asChild>
-                              <button className="w-full py-4 text-center font-medium text-mb-muted hover:text-mb-fg">
-                                Annuler
-                              </button>
-                            </DrawerClose>
-                          </DrawerFooter>
-                        </DrawerContent>
-                      </Drawer>
-                    </div>
+            <View className="flex-row items-center gap-2">
+              {/* Options button (only expanded) */}
+              {isExpanded && (
+                <Pressable
+                  onPress={() => setShowOptions(true)}
+                  hitSlop={8}
+                  className="w-8 h-8 items-center justify-center rounded-full active:bg-white/5"
+                >
+                  <Text className="text-foreground-muted text-lg leading-none">⋯</Text>
+                </Pressable>
+              )}
 
-                    <ChevronDown
-                      className={cn(
-                        "w-5 h-5 text-mb-muted transition-transform duration-500 ease-smooth flex-shrink-0",
-                        isExpanded ? "rotate-180 text-mb-primary" : ""
-                      )}
-                    />
-                  </div>
-                ) : (
-                  <ChevronDown
-                    className={cn(
-                      "w-5 h-5 text-mb-muted transition-transform duration-500 ease-smooth flex-shrink-0",
-                      isExpanded ? "rotate-180 text-mb-primary" : ""
-                    )}
-                  />
-                )}
-              </div>
+              {/* Chevron */}
+              <Text
+                className={`text-lg ${
+                  isExpanded ? "text-primary" : "text-foreground-subtle"
+                }`}
+              >
+                {isExpanded ? "⌃" : "⌄"}
+              </Text>
+            </View>
+          </View>
 
-              <div className="flex items-center justify-between">
-                {statusBadge}
-                {!isExpanded && lastEntry && (
-                  <span className="text-xs text-mb-muted/60 font-mono flex items-center gap-1">
-                    <History className="w-3 h-3" />
-                    {lastEntry.charge}kg
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+          {/* Status + last entry row */}
+          <View className="flex-row items-center justify-between mt-2">
+            <View
+              className={`px-2.5 py-0.5 rounded-full border ${statusClass}`}
+            >
+              <Text className={`text-[11px] font-semibold ${statusTextClass}`}>
+                {statusLabel}
+              </Text>
+            </View>
 
-        {/* Collapsed view summary - Only show when NOT expanded and NOT saved */}
-        {!isExpanded && !saved && (
-          <div className="flex items-center gap-2 mt-1 animate-fade-in">
-            <span className="text-xs font-mono text-mb-muted/80 bg-mb-surface/50 px-2 py-0.5 rounded-md">
-              {sets.length} séries
-            </span>
-            <span className="text-xs font-mono text-mb-muted/80 bg-mb-surface/50 px-2 py-0.5 rounded-md">
-              {exercise.repsMin}-{exercise.repsMax} reps
-            </span>
-          </div>
-        )}
+            {!isExpanded && lastEntry && (
+              <Text className="text-foreground-subtle text-xs font-mono">
+                {lastEntry.charge} kg · {lastEntry.sets.join("-")}
+              </Text>
+            )}
+          </View>
 
+          {/* Collapsed summary */}
+          {!isExpanded && !saved && (
+            <View className="flex-row gap-2 mt-2">
+              <View className="bg-surface/60 rounded-md px-2 py-0.5">
+                <Text className="text-foreground-muted text-xs font-mono">
+                  {exercise.sets} séries
+                </Text>
+              </View>
+              <View className="bg-surface/60 rounded-md px-2 py-0.5">
+                <Text className="text-foreground-muted text-xs font-mono">
+                  {exercise.repsMin}-{exercise.repsMax} reps
+                </Text>
+              </View>
+            </View>
+          )}
+        </Pressable>
+
+        {/* Expanded content */}
         {isExpanded && (
-          <p className="font-sans text-sm text-mb-muted mt-1">
-            Plage : {exercise.repsMin}-{exercise.repsMax} reps · RIR {exercise.rir}
-          </p>
-        )}
-      </div>
+          <View className="px-4 pb-4 gap-4">
+            {/* Last entry */}
+            {lastEntry && (
+              <View className="flex-row justify-end">
+                <Text className="text-foreground-muted text-xs font-mono">
+                  Dernière séance · {lastEntry.charge} kg ({lastEntry.sets.join("-")})
+                </Text>
+              </View>
+            )}
 
-      {/* Expanded content */}
-      {isExpanded && (
-        <div className="px-4 pb-4 animate-slide-down">
-          {/* Last entry + Sparkline */}
-          {history.length > 0 && (
-            <div className="flex justify-end items-end gap-3 mb-4">
-              <div className="text-right text-sm">
-                <p className="font-sans text-mb-muted uppercase tracking-wide text-xs mb-1">Dernière séance</p>
-                <p className="font-mono text-mb-fg">{lastEntry!.charge}kg ({lastEntry!.sets.join('-')})</p>
-              </div>
-            </div>
-          )}
+            {/* Progression banner */}
+            {progression && (
+              <View className="flex-row items-start gap-3 bg-primary/10 border-l-4 border-primary px-4 py-3 rounded-r-xl">
+                <Text className="text-lg">
+                  {progression.type === "increase_charge"
+                    ? "🏆"
+                    : progression.type === "stagnation"
+                    ? "⚡"
+                    : "📈"}
+                </Text>
+                <View className="flex-1">
+                  <Text className="text-primary font-medium text-sm">
+                    Objectif : {progression.nextCharge} kg
+                  </Text>
+                  <Text className="text-foreground-muted text-xs mt-0.5">
+                    Battre {progression.targetTotalReps} reps au total
+                  </Text>
+                </View>
+              </View>
+            )}
 
-          {/* Objectif du Jour */}
-          {progression && (
-            <div className="bg-mb-primary/10 border-l-4 border-mb-primary p-4 mb-6 rounded-r-xl flex items-start gap-3">
-              <span className="text-xl">
-                {progression.type === 'increase_charge' ? '🏆' : progression.type === 'stagnation' ? '⚡' : '📈'}
-              </span>
-              <div>
-                {progression.type === 'increase_charge' && (
-                  <>
-                    <p className="font-sans font-medium text-mb-primary">Objectif : {progression.nextCharge} kg</p>
-                    <p className="font-sans text-sm text-mb-secondary">Battre {progression.targetTotalReps} reps au total</p>
-                  </>
-                )}
-                {progression.type === 'stagnation' && (
-                  <>
-                    <p className="font-sans font-medium text-mb-primary">Stagnation détectée</p>
-                    <p className="font-sans text-sm text-mb-secondary">Réduis le volume ou deload</p>
-                  </>
-                )}
-                {progression.type === 'increase_reps' && (
-                  <>
-                    <p className="font-sans font-medium text-mb-primary">Objectif : {progression.nextCharge} kg</p>
-                    <p className="font-sans text-sm text-mb-secondary">Battre {progression.targetTotalReps} reps au total</p>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Inputs */}
-          <div className="space-y-4">
-
-
-            {/* Ligne 1: Charge et RIR */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            {/* Charge + RIR */}
+            <View className="flex-row gap-3">
+              <View className="flex-1">
                 <ChargeStepper
                   value={charge}
                   onChange={setCharge}
-                  step={0.5}
-                  min={0}
-                  max={500}
-                  label="Charge"
+                  step={2.5}
                 />
-              </div>
-              <div>
-                <label className="font-sans text-xs uppercase tracking-wider text-mb-muted block mb-2 text-center">
-                  RIR Senti
-                </label>
-                <div className="flex items-center justify-between bg-mb-input rounded-xl p-1 h-12">
-                  {[0, 1, 2, 3].map((val) => (
-                    <button
-                      key={val}
-                      onClick={() => setRir(val)}
-                      className={cn(
-                        "flex-1 h-full rounded-lg text-sm font-mono transition-all",
-                        rir === val
-                          ? "bg-mb-primary text-white shadow-sm font-medium"
-                          : "text-mb-muted hover:bg-mb-surface"
-                      )}
-                    >
-                      {val}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setRir(4)}
-                    className={cn(
-                      "flex-1 h-full rounded-lg text-sm font-mono transition-all",
-                      rir >= 4
-                        ? "bg-mb-primary text-white shadow-sm font-medium"
-                        : "text-mb-muted hover:bg-mb-surface"
-                    )}
-                  >
-                    4+
-                  </button>
-                </div>
-              </div>
-            </div>
+              </View>
+              <View className="flex-1">
+                <RIRSelector value={rir} onChange={setRir} />
+              </View>
+            </View>
 
-            {/* Set Chips */}
-            <div>
-              <div className="flex justify-between items-baseline mb-3">
-                <label className="font-sans text-xs uppercase tracking-wider text-mb-muted">
+            {/* Set chips */}
+            <View>
+              <View className="flex-row items-baseline justify-between mb-3">
+                <Text className="text-foreground-muted text-xs uppercase tracking-wider">
                   Séries
-                </label>
-                <span className="font-sans text-xs text-mb-secondary font-medium">
-                  Total: <span className="font-mono text-mb-primary">{totalReps}</span>
-                </span>
-              </div>
+                </Text>
+                <Text className="text-foreground-muted text-xs">
+                  Total :{" "}
+                  <Text className="text-primary font-mono">{totalReps}</Text>
+                </Text>
+              </View>
 
-              <div className="flex flex-wrap gap-2">
+              <View className="flex-row flex-wrap gap-2">
                 {sets.map((val, i) => {
                   const state = getChipState(i);
-                  return (
-                    <div key={i} className="flex flex-col items-center gap-1.5 flex-1 min-w-[70px]">
-                      {/* Set label */}
-                      <span className={cn(
-                        "text-[10px] uppercase tracking-widest font-sans",
-                        state === 'active' ? 'text-mb-primary font-semibold' : 'text-mb-muted'
-                      )}>
-                        {state === 'done' ? '✓' : `S${i + 1}`}
-                      </span>
+                  const chipBg =
+                    state === "active"
+                      ? "border-primary bg-surface"
+                      : state === "done"
+                      ? "border-success/40 bg-success/10"
+                      : "border-transparent bg-surface";
+                  const textColor =
+                    state === "active"
+                      ? "text-primary"
+                      : state === "done"
+                      ? "text-success"
+                      : "text-foreground-muted";
 
-                      {/* Input chip */}
-                      <div className={cn(
-                        "relative w-full rounded-xl transition-all duration-300",
-                        chipStyles[state]
-                      )}>
-                        <input
-                          ref={(el) => { inputRefs.current[i] = el; }}
-                          type="number"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={val || ''}
-                          onChange={(e) => handleSetChange(i, e.target.value)}
-                          onFocus={() => {
-                            handleChipFocus(i);
-                            setTimeout(() => {
-                              inputRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                            }, 300);
-                          }}
-                          className={cn(
-                            "w-full bg-transparent rounded-xl px-1 py-3 font-mono text-lg text-center outline-none min-h-[48px] transition-colors",
-                            state === 'done' ? 'text-mb-success font-semibold' : 'text-mb-primary'
-                          )}
-                          placeholder="-"
+                  return (
+                    <View
+                      key={i}
+                      className="flex-col items-center gap-1.5"
+                      style={{ minWidth: 64, flex: 1 }}
+                    >
+                      <Text
+                        className={`text-[10px] uppercase tracking-widest ${
+                          state === "active"
+                            ? "text-primary font-semibold"
+                            : "text-foreground-muted"
+                        }`}
+                      >
+                        {state === "done" ? "✓" : `S${i + 1}`}
+                      </Text>
+                      <Pressable
+                        className={`w-full rounded-xl border ${chipBg}`}
+                        onPress={() => setActiveSetIndex(i)}
+                      >
+                        <TextInput
+                          value={val > 0 ? String(val) : ""}
+                          onChangeText={(t) => handleSetChange(i, t)}
+                          onFocus={() => setActiveSetIndex(i)}
+                          keyboardType="numeric"
+                          placeholder="—"
+                          placeholderTextColor="#6E6E68"
+                          className={`text-center text-lg font-mono py-3 px-1 ${textColor}`}
+                          style={{ minHeight: 48 }}
                         />
-                      </div>
-                    </div>
+                      </Pressable>
+                    </View>
                   );
                 })}
-              </div>
+              </View>
 
               {/* Progress bar */}
-              <div className="mt-4 flex items-center gap-3">
-                <div className="flex-1 h-1.5 rounded-full bg-mb-input overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-mb-success transition-all duration-500 ease-out"
+              <View className="flex-row items-center gap-3 mt-4">
+                <View className="flex-1 h-1.5 rounded-full bg-surface overflow-hidden">
+                  <View
+                    className="h-full rounded-full bg-success"
                     style={{
                       width: `${(completedSets.size / exercise.sets) * 100}%`,
                     }}
                   />
-                </div>
-                <span className="font-sans text-[11px] text-mb-muted tabular-nums">
+                </View>
+                <Text className="text-foreground-muted text-[11px] font-mono">
                   {completedSets.size}/{exercise.sets}
-                </span>
-              </div>
-            </div>
-          </div>
+                </Text>
+              </View>
+            </View>
 
-          {/* Contextual Action Button */}
-          <button
-            onClick={handleValidateAndSave}
-            disabled={buttonConfig.disabled}
-            className={cn(
-              "w-full mt-6 rounded-full transition-all duration-300 active:scale-[0.98] font-sans font-medium text-sm uppercase tracking-wider py-4 min-h-[48px]",
-              buttonConfig.label.includes('Valider') ? 'bg-mb-primary text-white hover:bg-mb-primary/90' :
-                buttonConfig.style.replace('bg-mb-primary', 'bg-mb-surface border border-white/10').replace('rounded-md', 'rounded-full')
-            )}
-          >
-            {buttonConfig.label}
-          </button>
-        </div>
-      )}
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="bg-mb-bg border-white/10 max-w-sm mx-auto">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl text-mb-fg">
-              Supprimer {exercise.name} ?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-mb-muted">
-              L'exercice sera retiré de ta séance. L'historique de performances sera conservé.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="bg-mb-surface border-white/10 text-mb-muted hover:bg-white/5 hover:text-mb-fg">
-              Annuler
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                onDelete?.();
-                setShowDeleteConfirm(false);
-                setDrawerOpen(false);
-              }}
-              className="bg-mb-error text-white hover:bg-mb-error/90"
+            {/* Main action button */}
+            <Pressable
+              onPress={handleMainAction}
+              disabled={buttonConfig.disabled}
+              className={`w-full rounded-full py-4 items-center mt-2 active:opacity-80 ${
+                buttonConfig.variant === "success"
+                  ? "bg-success"
+                  : buttonConfig.variant === "primary"
+                  ? "bg-primary"
+                  : "bg-surface border border-border"
+              }`}
             >
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+              <Text
+                className={`font-semibold text-sm uppercase tracking-wider ${
+                  buttonConfig.variant === "disabled"
+                    ? "text-foreground-muted"
+                    : "text-white"
+                }`}
+              >
+                {buttonConfig.label}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
+
+      {/* Options bottom sheet */}
+      <OptionsSheet
+        visible={showOptions}
+        onClose={() => setShowOptions(false)}
+        title={exercise.name}
+        onEdit={() => onEditDefinition?.()}
+        onDelete={onDelete ? confirmDelete : undefined}
+      />
+    </>
   );
 }
