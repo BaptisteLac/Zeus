@@ -6,13 +6,13 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
 import {
   loadState,
-  saveState,
   computeBlock,
   getDefaultState,
 } from "@/lib/storage";
@@ -25,9 +25,13 @@ import {
 import { getCurrentUser, onAuthStateChange } from "@/lib/cloudStorage";
 import { AppState, Exercise, ExerciseInput, SessionType } from "@/lib/types";
 
+import { Colors } from "@/theme/colors";
+import { useTimer } from "@/context/TimerContext";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { MilestoneToast } from "@/components/ui/MilestoneToast";
+
 import SessionHeader from "@/components/SessionHeader";
 import ExerciseCard from "@/components/ExerciseCard";
-import RestTimer from "@/components/RestTimer";
 import ExerciseFormSheet from "@/components/ExerciseFormSheet";
 import SessionSummary from "@/components/SessionSummary";
 import AuthModal from "@/components/AuthModal";
@@ -43,9 +47,6 @@ export default function WorkoutScreen() {
   const [savedExercises, setSavedExercises] = useState<Set<string>>(new Set());
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
 
-  // Timer overlay
-  const [timer, setTimer] = useState<{ seconds: number; key: number } | null>(null);
-
   // Exercise form sheet
   const [showForm, setShowForm] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | undefined>();
@@ -56,12 +57,21 @@ export default function WorkoutScreen() {
   // Auth modal
   const [showAuth, setShowAuth] = useState(false);
 
+  // Milestone — halfway toast
+  const [showHalfway, setShowHalfway] = useState(false);
+
+  // ── Global timer (Phase 6 — DynamicIslandPill dans _layout.tsx) ─────────────
+  const { startTimer } = useTimer();
+
+  // ── Auto-save (Phase 9) ──────────────────────────────────────────────────────
+  const { saveImmediate, pendingSession, dismissPending } = useAutoSave();
+
   // ── Load state ──────────────────────────────────────────────────────────────
   useEffect(() => {
     loadState().then((loaded) => {
       if (!loaded.customExercises) {
         loaded = { ...loaded, customExercises: initCustomExercises() };
-        saveState(loaded);
+        saveImmediate(loaded);
       }
       const { block, week } = computeBlock(loaded.programStartDate);
       setState({ ...loaded, currentBlock: block as 1 | 2 | 3, weekNumber: week });
@@ -107,6 +117,14 @@ export default function WorkoutScreen() {
     }
   }, [exercises]);
 
+  // ── Milestone : halfway detection ─────────────────────────────────────────────
+  useEffect(() => {
+    const halfway = Math.floor(exercises.length / 2);
+    if (halfway > 0 && savedExercises.size === halfway) {
+      setShowHalfway(true);
+    }
+  }, [savedExercises.size, exercises.length]);
+
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
   const handleSaveExercise = useCallback(
@@ -120,11 +138,19 @@ export default function WorkoutScreen() {
           rir: input.rir,
         };
         const history = [...(prev.workoutData[exerciseId] || []), entry];
+        // Maintenir currentSessionData.savedExercises pour le snapshot MMKV
+        const prevSaved = prev.currentSessionData?.savedExercises ?? [];
         const updated = {
           ...prev,
           workoutData: { ...prev.workoutData, [exerciseId]: history },
+          currentSessionData: {
+            exerciseInputs: prev.currentSessionData?.exerciseInputs ?? {},
+            savedExercises: prevSaved.includes(exerciseId)
+              ? prevSaved
+              : [...prevSaved, exerciseId],
+          },
         };
-        saveState(updated);
+        saveImmediate(updated);
         return updated;
       });
 
@@ -137,7 +163,7 @@ export default function WorkoutScreen() {
       );
       if (nextUnsaved) setExpandedExerciseId(nextUnsaved.id);
     },
-    [exercises, savedExercises]
+    [exercises, savedExercises, saveImmediate]
   );
 
   const handleUpdateExercise = useCallback(
@@ -157,11 +183,11 @@ export default function WorkoutScreen() {
           ...prev,
           workoutData: { ...prev.workoutData, [exerciseId]: history },
         };
-        saveState(updated);
+        saveImmediate(updated);
         return updated;
       });
     },
-    []
+    [saveImmediate]
   );
 
   const handleDeleteExercise = useCallback((exerciseId: string) => {
@@ -173,7 +199,7 @@ export default function WorkoutScreen() {
         [session]: (currentCustom[session] || []).filter((ex) => ex.id !== exerciseId),
       };
       const updated = { ...prev, customExercises: updatedCustom };
-      saveState(updated);
+      saveImmediate(updated);
       return updated;
     });
     setSavedExercises((prev) => {
@@ -181,7 +207,7 @@ export default function WorkoutScreen() {
       next.delete(exerciseId);
       return next;
     });
-  }, []);
+  }, [saveImmediate]);
 
   const handleAddExercise = useCallback(
     (exerciseData: Omit<Exercise, "id">) => {
@@ -196,11 +222,11 @@ export default function WorkoutScreen() {
           [session]: [...sessionExercises, newExercise],
         };
         const updated = { ...prev, customExercises: updatedCustom };
-        saveState(updated);
+        saveImmediate(updated);
         return updated;
       });
     },
-    []
+    [saveImmediate]
   );
 
   const handleEditExerciseDefinition = useCallback(
@@ -215,19 +241,23 @@ export default function WorkoutScreen() {
           ),
         };
         const updated = { ...prev, customExercises: updatedCustom };
-        saveState(updated);
+        saveImmediate(updated);
         return updated;
       });
     },
-    []
+    [saveImmediate]
   );
 
   const handleChangeSession = useCallback(
     (session: SessionType) => {
       const doChange = () => {
         setState((prev) => {
-          const updated = { ...prev, currentSession: session };
-          saveState(updated);
+          const updated = {
+            ...prev,
+            currentSession: session,
+            currentSessionData: undefined,
+          };
+          saveImmediate(updated);
           return updated;
         });
         setSavedExercises(new Set());
@@ -247,7 +277,7 @@ export default function WorkoutScreen() {
       }
       doChange();
     },
-    [savedExercises]
+    [savedExercises, saveImmediate]
   );
 
   const handleFinishSession = () => {
@@ -270,15 +300,35 @@ export default function WorkoutScreen() {
   const handleConfirmFinish = () => {
     setShowSummary(false);
     setState((prev) => {
-      const updated = { ...prev, currentSession: nextSession[prev.currentSession] };
-      saveState(updated);
+      const updated = {
+        ...prev,
+        currentSession: nextSession[prev.currentSession],
+        currentSessionData: undefined,
+      };
+      saveImmediate(updated);
       return updated;
     });
     setSavedExercises(new Set());
     setExpandedExerciseId(null);
-    setTimer(null);
+    dismissPending();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
+
+  // ── Crash recovery ───────────────────────────────────────────────────────────
+
+  const handleResumeSession = useCallback(() => {
+    if (!pendingSession) return;
+    setState((prev) => ({
+      ...prev,
+      currentSession: pendingSession.sessionType,
+      currentSessionData: {
+        exerciseInputs: pendingSession.exerciseInputs,
+        savedExercises: pendingSession.savedExercises,
+      },
+    }));
+    setSavedExercises(new Set(pendingSession.savedExercises));
+    dismissPending();
+  }, [pendingSession, dismissPending]);
 
   const allSaved =
     exercises.length > 0 && exercises.every((ex) => savedExercises.has(ex.id));
@@ -288,7 +338,7 @@ export default function WorkoutScreen() {
   if (isLoading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator color="#C0694A" size="large" />
+        <ActivityIndicator color={Colors.emotional} size="large" />
         <Text className="text-foreground-muted text-sm mt-3">Chargement…</Text>
       </View>
     );
@@ -309,6 +359,17 @@ export default function WorkoutScreen() {
           onAuthClick={() => setShowAuth(true)}
         />
 
+        {/* Milestone — halfway toast (banner inline sous le header) */}
+        {showHalfway && (
+          <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+            <MilestoneToast
+              type="halfway"
+              visible
+              onHide={() => setShowHalfway(false)}
+            />
+          </View>
+        )}
+
         {/* Exercise list */}
         <ScrollView
           className="flex-1"
@@ -324,7 +385,7 @@ export default function WorkoutScreen() {
               onSave={(input: ExerciseInput) => handleSaveExercise(exercise.id, input)}
               onUpdate={(input: ExerciseInput) => handleUpdateExercise(exercise.id, input)}
               onStartTimer={(seconds) =>
-                setTimer({ seconds, key: Date.now() })
+                startTimer({ duration: seconds, exerciseName: exercise.name, nextSet: '' })
               }
               onEditDefinition={() => {
                 setEditingExercise(exercise);
@@ -382,18 +443,6 @@ export default function WorkoutScreen() {
         </View>
       </SafeAreaView>
 
-      {/* Rest timer overlay — renders above everything */}
-      {timer && (
-        <RestTimer
-          key={timer.key}
-          initialSeconds={timer.seconds}
-          onDismiss={() => setTimer(null)}
-          onComplete={() => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          }}
-        />
-      )}
-
       {/* Session summary */}
       <SessionSummary
         visible={showSummary}
@@ -431,6 +480,74 @@ export default function WorkoutScreen() {
           editingExercise ? () => handleDeleteExercise(editingExercise.id) : undefined
         }
       />
+
+      {/* ── Crash recovery — bottom sheet de reprise ─────────────────────────── */}
+      {pendingSession && (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          onRequestClose={dismissPending}
+        >
+          {/* Backdrop — tap pour ignorer */}
+          <Pressable
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              justifyContent: 'flex-end',
+            }}
+            onPress={dismissPending}
+          >
+            {/* Sheet — absorbe les taps pour ne pas fermer au tap interne */}
+            <Pressable
+              onPress={() => {}}
+              style={{
+                backgroundColor: Colors.surface,
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
+                padding: 24,
+                paddingBottom: insets.bottom + 24,
+                gap: 12,
+              }}
+            >
+              <Text
+                style={{ color: Colors.foreground, fontSize: 17, fontWeight: '600' }}
+              >
+                Séance en cours détectée
+              </Text>
+              <Text
+                style={{ color: Colors.foregroundMuted, fontSize: 14, lineHeight: 20, marginBottom: 4 }}
+              >
+                Une séance {pendingSession.sessionType} a été interrompue.
+                {pendingSession.savedExercises.length > 0
+                  ? ` ${pendingSession.savedExercises.length} exercice(s) validé(s).`
+                  : ' Aucun exercice validé.'}
+              </Text>
+              <Pressable
+                onPress={handleResumeSession}
+                style={{
+                  backgroundColor: Colors.emotional,
+                  borderRadius: 12,
+                  paddingVertical: 14,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 15 }}>
+                  Reprendre la séance
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={dismissPending}
+                style={{ borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}
+              >
+                <Text style={{ color: Colors.foregroundMuted, fontWeight: '500', fontSize: 15 }}>
+                  Abandonner
+                </Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
     </View>
   );
 }

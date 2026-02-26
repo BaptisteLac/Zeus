@@ -7,14 +7,12 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
-import * as Haptics from "expo-haptics";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   withSpring,
   withSequence,
-  withDelay,
 } from "react-native-reanimated";
 import { Exercise, WorkoutEntry, ExerciseInput } from "@/lib/types";
 import { calculateProgression } from "@/lib/progression";
@@ -22,6 +20,9 @@ import { ChargeStepper } from "./ChargeStepper";
 import { RIRSelector } from "./RIRSelector";
 import { OptionsSheet } from "./OptionsSheet";
 import { Colors } from "@/theme/colors";
+import { useHaptics } from "@/hooks/useHaptics";
+import { PRBadge, PRGlow } from "@/components/ui/PRBadge";
+import { SwipeableSerieRow } from "@/components/SwipeableSerieRow";
 
 // ─── SetCheckmark ────────────────────────────────────────────────────────────
 // Mounts when a set transitions to "done" — triggers scale-in animation once.
@@ -68,6 +69,8 @@ export default function ExerciseCard({
   isExpanded = false,
   onToggle,
 }: ExerciseCardProps) {
+  const haptics = useHaptics();
+
   const lastEntry = history.length > 0 ? history[history.length - 1] : null;
 
   const progression = useMemo(
@@ -158,7 +161,7 @@ export default function ExerciseCard({
     });
     const nextIdx = findNextUncompletedSet(setIndex);
     if (nextIdx !== null) setActiveSetIndex(nextIdx);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    haptics.medium();
     onStartTimer?.(exercise.rest);
   };
 
@@ -170,7 +173,7 @@ export default function ExerciseCard({
       onUpdate?.(input);
       setSavedValues(input);
       setModified(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
       return;
     }
 
@@ -179,7 +182,7 @@ export default function ExerciseCard({
       onSave(input);
       setSavedValues(input);
       setCompletedSets(new Set(sets.map((_, i) => i)));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
       return;
     }
 
@@ -193,7 +196,7 @@ export default function ExerciseCard({
       onSave(input);
       setSavedValues(input);
       setCompletedSets(new Set(sets.map((_, i) => i)));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
       return;
     }
 
@@ -252,34 +255,6 @@ export default function ExerciseCard({
       : 0;
   const isPR = saved && maxPriorCharge > 0 && charge > maxPriorCharge;
 
-  // ─── PR Animations ──────────────────────────────────────────────────────────
-  const prBadgeScale = useSharedValue(0);
-  const prGlowOpacity = useSharedValue(0);
-
-  const prBadgeStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: prBadgeScale.value }],
-    opacity: prBadgeScale.value,
-  }));
-  const prGlowStyle = useAnimatedStyle(() => ({
-    opacity: prGlowOpacity.value,
-  }));
-
-  useEffect(() => {
-    if (isPR) {
-      // Badge: scale 0 → 1.2 → 1 in 600ms total
-      prBadgeScale.value = withSequence(
-        withTiming(1.2, { duration: 300 }),
-        withTiming(1, { duration: 300 }),
-      );
-      // Glow: fade in, hold 2.4s, fade out
-      prGlowOpacity.value = withSequence(
-        withTiming(1, { duration: 300 }),
-        withDelay(2400, withTiming(0, { duration: 300 })),
-      );
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-  }, [isPR]);
-
   const confirmDelete = () => {
     Alert.alert(
       `Supprimer ${exercise.name} ?`,
@@ -329,20 +304,14 @@ export default function ExerciseCard({
             className="absolute inset-0 bg-emotional/8"
           />
         )}
-        {/* PR — glow achievement 6% (animé, disparaît après 3s) */}
-        {isPR && (
-          <Animated.View
-            pointerEvents="none"
-            style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, prGlowStyle]}
-            className="bg-achievement/6"
-          />
-        )}
+        {/* PR — glow achievement 6% (animé via PRGlow, disparaît après 3s) */}
+        <PRGlow visible={isPR} />
 
         {/* Header — tap to toggle, long-press to edit */}
         <Pressable
           onPress={() => onToggle?.()}
           onLongPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            haptics.heavy();
             onEditDefinition?.();
           }}
           delayLongPress={500}
@@ -361,16 +330,11 @@ export default function ExerciseCard({
                   {exercise.repsMin}–{exercise.repsMax} reps · RIR {exercise.rir}
                 </Text>
               )}
-              {/* Badge PR — scale 0→1.2→1 en 600ms via reanimated */}
+              {/* Badge PR — géré par PRBadge (Phase 7) */}
               {isPR && (
-                <Animated.View
-                  style={prBadgeStyle}
-                  className="self-start mt-2 px-2.5 py-0.5 rounded-full bg-achievement/15 border border-achievement/40"
-                >
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.achievement }}>
-                    🏆 PR — {charge} kg
-                  </Text>
-                </Animated.View>
+                <View className="mt-2">
+                  <PRBadge visible={isPR} value={`${charge} kg`} />
+                </View>
               )}
             </View>
 
@@ -487,7 +451,7 @@ export default function ExerciseCard({
               </View>
             </View>
 
-            {/* Set chips */}
+            {/* Set chips — chaque série swipeable via SwipeableSerieRow */}
             <View>
               <View className="flex-row items-baseline justify-between mb-3">
                 <Text className="text-foreground-muted text-xs uppercase tracking-wider">
@@ -516,39 +480,42 @@ export default function ExerciseCard({
                         : "text-foreground-muted";
 
                   return (
-                    <View
-                      key={i}
-                      className="flex-col items-center gap-1.5"
-                      style={{ minWidth: 64, flex: 1 }}
-                    >
-                      {state === "done" ? (
-                        <SetCheckmark />
-                      ) : (
-                        <Text
-                          className={`text-[10px] uppercase tracking-widest ${
-                            state === "active"
-                              ? "text-accent font-semibold"
-                              : "text-foreground-muted"
-                          }`}
-                        >
-                          {`S${i + 1}`}
-                        </Text>
-                      )}
-                      <Pressable
-                        className={`w-full rounded-xl border ${chipBg}`}
-                        onPress={() => setActiveSetIndex(i)}
+                    <View key={i} style={{ minWidth: 64, flex: 1 }}>
+                      <SwipeableSerieRow
+                        onComplete={() => handleValidateSet(i)}
+                        disabled={completedSets.has(i)}
                       >
-                        <TextInput
-                          value={val > 0 ? String(val) : ""}
-                          onChangeText={(t) => handleSetChange(i, t)}
-                          onFocus={() => setActiveSetIndex(i)}
-                          keyboardType="numeric"
-                          placeholder="—"
-                          placeholderTextColor="#6E6E68"
-                          className={`text-center text-lg font-mono py-3 px-1 ${textColor}`}
-                          style={{ minHeight: 48 }}
-                        />
-                      </Pressable>
+                        <View className="flex-col items-center gap-1.5">
+                          {state === "done" ? (
+                            <SetCheckmark />
+                          ) : (
+                            <Text
+                              className={`text-[10px] uppercase tracking-widest ${
+                                state === "active"
+                                  ? "text-accent font-semibold"
+                                  : "text-foreground-muted"
+                              }`}
+                            >
+                              {`S${i + 1}`}
+                            </Text>
+                          )}
+                          <Pressable
+                            className={`w-full rounded-xl border ${chipBg}`}
+                            onPress={() => setActiveSetIndex(i)}
+                          >
+                            <TextInput
+                              value={val > 0 ? String(val) : ""}
+                              onChangeText={(t) => handleSetChange(i, t)}
+                              onFocus={() => setActiveSetIndex(i)}
+                              keyboardType="numeric"
+                              placeholder="—"
+                              placeholderTextColor="#6E6E68"
+                              className={`text-center text-lg font-mono py-3 px-1 ${textColor}`}
+                              style={{ minHeight: 48 }}
+                            />
+                          </Pressable>
+                        </View>
+                      </SwipeableSerieRow>
                     </View>
                   );
                 })}

@@ -46,3 +46,9 @@
 - [ ] index.tsx → bottom sheet "Reprendre / Abandonner" si pendingSession !== null
 - [ ] index.tsx → appeler dismissPending() après handleReset (fin de séance)
 - [ ] ExerciseCard.tsx → passer saveDebounced comme prop aux NumericInput onChange
+
+## Identifié lors de Phase 10a (Logic)
+- [ ] ExerciseCard.tsx → ajouter prop onInputChange pour brancher saveDebounced (Phase 10b)
+- [ ] RestTimer.tsx → supprimer (`grep -r "RestTimer" src/` pour confirmer orphelin)
+- [ ] ExerciseCard.tsx → changer signature onStartTimer: (seconds: number) → (seconds: number, nextSet: string) pour alimenter la DynamicIslandPill
+
