@@ -169,16 +169,14 @@ export default function SettingsScreen() {
                 <Pressable
                   key={b}
                   onPress={() => handleChangeBlock(b)}
-                  className={`flex-1 py-2.5 rounded-xl items-center ${
-                    appState.currentBlock === b
-                      ? "bg-primary"
-                      : "bg-background border border-border"
-                  }`}
+                  className={`flex-1 py-2.5 rounded-xl items-center ${appState.currentBlock === b
+                    ? "bg-primary"
+                    : "bg-background border border-border"
+                    }`}
                 >
                   <Text
-                    className={`text-sm font-semibold ${
-                      appState.currentBlock === b ? "text-white" : "text-foreground-muted"
-                    }`}
+                    className={`text-sm font-semibold ${appState.currentBlock === b ? "text-white" : "text-foreground-muted"
+                      }`}
                   >
                     Bloc {b}
                   </Text>
@@ -216,5 +214,7 @@ export default function SettingsScreen() {
         }}
       />
     </SafeAreaView>
+  );
+}
   );
 }

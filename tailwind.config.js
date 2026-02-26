@@ -5,59 +5,65 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Primary — Terracotta
-        primary: {
-          DEFAULT: "#C0694A",
-          light: "#D4845F",
-          dark: "#A0573C",
+        // Système Émotionnel (v2.0)
+        accent: {
+          DEFAULT: "#C47A3D", // Focus - état actif, saisie
         },
-        // Success — Sage Green
+        emotional: {
+          DEFAULT: "#E05D36", // Validation - série cochée, exercice terminé
+        },
+        achievement: {
+          DEFAULT: "#FF8C42", // Achievement - PR, record personnel
+        },
+
+        // Rétro-compatibilité le temps de la migration totale
+        primary: {
+          DEFAULT: "#E05D36", // mapped to emotional for now
+          light: "#FF8C42",
+          dark: "#C47A3D",
+        },
         success: {
           DEFAULT: "#6B9E7A",
           light: "#85B894",
           dark: "#557F62",
         },
-        // Secondary — Amber/Orange (stagnation indicators)
         secondary: {
           DEFAULT: "#D4A017",
           light: "#F1C40F",
           dark: "#B8891A",
         },
-        // Error
         error: {
           DEFAULT: "#C0392B",
           light: "#E74C3C",
         },
-        // Warning
         warning: {
           DEFAULT: "#D4A017",
           light: "#F1C40F",
         },
-        // Info
         info: {
           DEFAULT: "#2980B9",
           light: "#3498DB",
         },
-        // Surfaces
+
+        // Surfaces (v2.0)
         surface: {
-          DEFAULT: "#1C1C1E",
-          elevated: "#2C2C2E",
-          card: "#2C2C2E",
+          DEFAULT: "#1E2128",
+          elevated: "#2A2E37",
+          card: "#1E2128",
         },
-        // Background
+        // Background (v2.0)
         background: {
-          DEFAULT: "#121214",
+          DEFAULT: "#111318",
         },
-        // Text
+        // Text (v2.0)
         foreground: {
-          DEFAULT: "#F5F5F0",
-          muted: "#A0A09A",
-          subtle: "#6E6E68",
+          DEFAULT: "#F5F5F7",
+          muted: "#8B92A5",
+          subtle: "#555B6A",
         },
-        // Border
+        // Border (v2.0)
         border: {
-          DEFAULT: "#3A3A3C",
-          muted: "#2C2C2E",
+          DEFAULT: "#2A2E37",
         },
       },
       borderRadius: {

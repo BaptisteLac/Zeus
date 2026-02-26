@@ -125,14 +125,12 @@ export default function SessionHeader({
                     onChangeSession(s);
                     setShowPicker(false);
                   }}
-                  className={`px-5 py-4 flex-row items-center justify-between active:bg-white/5 ${
-                    i < 2 ? "border-b border-border" : ""
-                  }`}
+                  className={`px-5 py-4 flex-row items-center justify-between active:bg-white/5 ${i < 2 ? "border-b border-border" : ""
+                    }`}
                 >
                   <Text
-                    className={`font-medium text-base ${
-                      session === s ? "text-primary" : "text-foreground"
-                    }`}
+                    className={`font-medium text-base ${session === s ? "text-primary" : "text-foreground"
+                      }`}
                   >
                     Séance {s}
                   </Text>
@@ -146,5 +144,7 @@ export default function SessionHeader({
         </TouchableWithoutFeedback>
       </Modal>
     </>
+  );
+}
   );
 }

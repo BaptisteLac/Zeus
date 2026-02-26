@@ -30,9 +30,8 @@ function MiniChart({ history }: { history: WorkoutEntry[] }) {
         <View
           key={i}
           style={{ height: `${Math.max((v / maxVol) * 100, 8)}%` }}
-          className={`flex-1 rounded-sm ${
-            i === volumes.length - 1 ? "bg-primary" : "bg-foreground-subtle/40"
-          }`}
+          className={`flex-1 rounded-sm ${i === volumes.length - 1 ? "bg-primary" : "bg-foreground-subtle/40"
+            }`}
         />
       ))}
     </View>
@@ -93,9 +92,8 @@ function ExerciseHistoryRow({ item }: { item: ExerciseRow }) {
               return (
                 <View
                   key={i}
-                  className={`flex-row items-center px-3 py-2 ${
-                    i < arr.length - 1 ? "border-b border-border/50" : ""
-                  }`}
+                  className={`flex-row items-center px-3 py-2 ${i < arr.length - 1 ? "border-b border-border/50" : ""
+                    }`}
                 >
                   <Text className="text-foreground-muted text-[11px] w-14">{d}</Text>
                   <Text className="text-foreground text-xs font-mono flex-1">
@@ -174,14 +172,12 @@ export default function HistoryScreen() {
           <Pressable
             key={s}
             onPress={() => setActiveSession(s)}
-            className={`flex-1 py-2.5 rounded-xl items-center ${
-              activeSession === s ? "bg-primary" : "bg-surface border border-border"
-            }`}
+            className={`flex-1 py-2.5 rounded-xl items-center ${activeSession === s ? "bg-primary" : "bg-surface border border-border"
+              }`}
           >
             <Text
-              className={`text-sm font-semibold ${
-                activeSession === s ? "text-white" : "text-foreground-muted"
-              }`}
+              className={`text-sm font-semibold ${activeSession === s ? "text-white" : "text-foreground-muted"
+                }`}
             >
               Séance {s}
             </Text>
@@ -211,5 +207,9 @@ export default function HistoryScreen() {
         </View>
       )}
     </SafeAreaView>
+  );
+}
+      )}
+    </SafeAreaView >
   );
 }

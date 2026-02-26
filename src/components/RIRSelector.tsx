@@ -20,14 +20,12 @@ export function RIRSelector({ value, onChange }: RIRSelectorProps) {
             <Pressable
               key={val}
               onPress={() => onChange(val)}
-              className={`flex-1 h-full rounded-lg items-center justify-center ${
-                active ? "bg-primary" : ""
-              }`}
+              className={`flex-1 h-full rounded-lg items-center justify-center ${active ? "bg-primary" : ""
+                }`}
             >
               <Text
-                className={`text-sm font-mono ${
-                  active ? "text-white font-semibold" : "text-foreground-muted"
-                }`}
+                className={`text-sm font-mono ${active ? "text-white font-semibold" : "text-foreground-muted"
+                  }`}
               >
                 {val === 4 ? "4+" : String(val)}
               </Text>

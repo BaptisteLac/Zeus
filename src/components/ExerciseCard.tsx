@@ -55,8 +55,8 @@ export default function ExerciseCard({
   const defaultCharge = progression
     ? progression.nextCharge
     : lastEntry
-    ? lastEntry.charge
-    : 0;
+      ? lastEntry.charge
+      : 0;
 
   const [charge, setCharge] = useState(defaultCharge);
   const [sets, setSets] = useState<number[]>(
@@ -181,25 +181,25 @@ export default function ExerciseCard({
 
   const getButtonConfig = () => {
     if (saved && !modified) {
-      return { label: "Enregistré ✓", variant: "success", disabled: false };
+      return { label: "Enregistré ✓", variant: "emotional", disabled: false };
     }
     if (saved && modified) {
-      return { label: "Modifier", variant: "primary", disabled: false };
+      return { label: "Modifier", variant: "accent", disabled: false };
     }
     if (!canSave) {
       return { label: "Enregistrer", variant: "disabled", disabled: true };
     }
     if (allSetsFilled && completedSets.size === 0) {
-      return { label: "Enregistrer l'exercice", variant: "success", disabled: false };
+      return { label: "Enregistrer l'exercice", variant: "emotional", disabled: false };
     }
     const remaining = exercise.sets - completedSets.size;
     if (remaining === 1 && sets[activeSetIndex] > 0) {
-      return { label: "Terminer l'exercice ✓", variant: "success", disabled: false };
+      return { label: "Terminer l'exercice ✓", variant: "emotional", disabled: false };
     }
     if (sets[activeSetIndex] > 0) {
       return {
         label: `Valider S${activeSetIndex + 1} & Repos ⏱`,
-        variant: "primary",
+        variant: "accent",
         disabled: false,
       };
     }
@@ -235,30 +235,29 @@ export default function ExerciseCard({
 
   // Card border color
   const cardBorderClass = saved
-    ? "border-success/20"
+    ? "border-emotional/20"
     : isExpanded
-    ? "border-primary/30"
-    : "border-border";
+      ? "border-accent/30"
+      : "border-border";
 
   // Status badge
   const statusLabel = saved ? "VALIDÉ" : isExpanded ? "EN COURS" : "EN ATTENTE";
   const statusClass = saved
-    ? "bg-success/10 border-success/20"
+    ? "bg-emotional/10 border-emotional/20"
     : isExpanded
-    ? "bg-primary/10 border-primary/20"
-    : "bg-surface border-border";
+      ? "bg-accent/10 border-accent/20"
+      : "bg-surface border-border";
   const statusTextClass = saved
-    ? "text-success"
+    ? "text-emotional"
     : isExpanded
-    ? "text-primary"
-    : "text-foreground-muted";
+      ? "text-accent"
+      : "text-foreground-muted";
 
   return (
     <>
       <View
-        className={`rounded-2xl border overflow-hidden ${cardBorderClass} ${
-          saved ? "opacity-70" : ""
-        }`}
+        className={`rounded-2xl border overflow-hidden ${cardBorderClass} ${saved ? "opacity-70" : ""
+          }`}
         style={{ backgroundColor: "#1C1C1E" }}
       >
         {/* Header — tap to toggle, long-press to edit */}
@@ -274,9 +273,8 @@ export default function ExerciseCard({
           <View className="flex-row items-start justify-between">
             <View className="flex-1 pr-3">
               <Text
-                className={`text-base font-semibold uppercase tracking-wide leading-tight ${
-                  isExpanded ? "text-primary" : "text-foreground"
-                }`}
+                className={`text-base font-semibold uppercase tracking-wide leading-tight ${isExpanded ? "text-accent" : "text-foreground"
+                  }`}
               >
                 {exercise.name}
               </Text>
@@ -301,9 +299,8 @@ export default function ExerciseCard({
 
               {/* Chevron */}
               <Text
-                className={`text-lg ${
-                  isExpanded ? "text-primary" : "text-foreground-subtle"
-                }`}
+                className={`text-lg ${isExpanded ? "text-accent" : "text-foreground-subtle"
+                  }`}
               >
                 {isExpanded ? "⌃" : "⌄"}
               </Text>
@@ -358,16 +355,16 @@ export default function ExerciseCard({
 
             {/* Progression banner */}
             {progression && (
-              <View className="flex-row items-start gap-3 bg-primary/10 border-l-4 border-primary px-4 py-3 rounded-r-xl">
+              <View className="flex-row items-start gap-3 bg-achievement/10 border-l-4 border-achievement px-4 py-3 rounded-r-xl">
                 <Text className="text-lg">
                   {progression.type === "increase_charge"
                     ? "🏆"
                     : progression.type === "stagnation"
-                    ? "⚡"
-                    : "📈"}
+                      ? "⚡"
+                      : "📈"}
                 </Text>
                 <View className="flex-1">
-                  <Text className="text-primary font-medium text-sm">
+                  <Text className="text-achievement font-medium text-sm">
                     Objectif : {progression.nextCharge} kg
                   </Text>
                   <Text className="text-foreground-muted text-xs mt-0.5">
@@ -399,7 +396,7 @@ export default function ExerciseCard({
                 </Text>
                 <Text className="text-foreground-muted text-xs">
                   Total :{" "}
-                  <Text className="text-primary font-mono">{totalReps}</Text>
+                  <Text className="text-accent font-mono">{totalReps}</Text>
                 </Text>
               </View>
 
@@ -408,16 +405,16 @@ export default function ExerciseCard({
                   const state = getChipState(i);
                   const chipBg =
                     state === "active"
-                      ? "border-primary bg-surface"
+                      ? "border-accent bg-surface"
                       : state === "done"
-                      ? "border-success/40 bg-success/10"
-                      : "border-transparent bg-surface";
+                        ? "border-emotional/40 bg-emotional/10"
+                        : "border-transparent bg-surface";
                   const textColor =
                     state === "active"
-                      ? "text-primary"
+                      ? "text-accent"
                       : state === "done"
-                      ? "text-success"
-                      : "text-foreground-muted";
+                        ? "text-emotional"
+                        : "text-foreground-muted";
 
                   return (
                     <View
@@ -426,11 +423,10 @@ export default function ExerciseCard({
                       style={{ minWidth: 64, flex: 1 }}
                     >
                       <Text
-                        className={`text-[10px] uppercase tracking-widest ${
-                          state === "active"
-                            ? "text-primary font-semibold"
-                            : "text-foreground-muted"
-                        }`}
+                        className={`text-[10px] uppercase tracking-widest ${state === "active"
+                          ? "text-accent font-semibold"
+                          : "text-foreground-muted"
+                          }`}
                       >
                         {state === "done" ? "✓" : `S${i + 1}`}
                       </Text>
@@ -458,7 +454,7 @@ export default function ExerciseCard({
               <View className="flex-row items-center gap-3 mt-4">
                 <View className="flex-1 h-1.5 rounded-full bg-surface overflow-hidden">
                   <View
-                    className="h-full rounded-full bg-success"
+                    className="h-full rounded-full bg-emotional"
                     style={{
                       width: `${(completedSets.size / exercise.sets) * 100}%`,
                     }}
@@ -474,20 +470,18 @@ export default function ExerciseCard({
             <Pressable
               onPress={handleMainAction}
               disabled={buttonConfig.disabled}
-              className={`w-full rounded-full py-4 items-center mt-2 active:opacity-80 ${
-                buttonConfig.variant === "success"
-                  ? "bg-success"
-                  : buttonConfig.variant === "primary"
-                  ? "bg-primary"
+              className={`w-full rounded-full py-4 items-center mt-2 active:opacity-80 ${buttonConfig.variant === "emotional"
+                ? "bg-emotional"
+                : buttonConfig.variant === "accent"
+                  ? "bg-accent"
                   : "bg-surface border border-border"
-              }`}
+                }`}
             >
               <Text
-                className={`font-semibold text-sm uppercase tracking-wider ${
-                  buttonConfig.variant === "disabled"
-                    ? "text-foreground-muted"
-                    : "text-white"
-                }`}
+                className={`font-semibold text-sm uppercase tracking-wider ${buttonConfig.variant === "disabled"
+                  ? "text-foreground-muted"
+                  : "text-white"
+                  }`}
               >
                 {buttonConfig.label}
               </Text>

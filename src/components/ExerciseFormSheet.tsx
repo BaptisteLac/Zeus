@@ -270,9 +270,8 @@ export default function ExerciseFormSheet({
                       <Pressable
                         key={entry.name}
                         onPress={() => handleSelectEntry(entry)}
-                        className={`flex-row items-center justify-between px-4 py-3 active:bg-white/5 ${
-                          idx < arr.length - 1 ? "border-b border-border/50" : ""
-                        }`}
+                        className={`flex-row items-center justify-between px-4 py-3 active:bg-white/5 ${idx < arr.length - 1 ? "border-b border-border/50" : ""
+                          }`}
                       >
                         <View className="flex-1 mr-3">
                           <Text className="text-foreground text-sm font-medium">
@@ -336,16 +335,14 @@ export default function ExerciseFormSheet({
                     <Pressable
                       key={val}
                       onPress={() => setRir(val)}
-                      className={`flex-1 h-10 rounded-lg items-center justify-center ${
-                        rir === val ? "bg-primary" : ""
-                      }`}
+                      className={`flex-1 h-10 rounded-lg items-center justify-center ${rir === val ? "bg-primary" : ""
+                        }`}
                     >
                       <Text
-                        className={`text-sm font-mono ${
-                          rir === val
+                        className={`text-sm font-mono ${rir === val
                             ? "text-white font-semibold"
                             : "text-foreground-muted"
-                        }`}
+                          }`}
                       >
                         {val}
                       </Text>
@@ -358,14 +355,12 @@ export default function ExerciseFormSheet({
               <Pressable
                 onPress={handleSubmit}
                 disabled={!canSubmit}
-                className={`rounded-full py-4 items-center mb-3 active:opacity-80 ${
-                  canSubmit ? "bg-primary" : "bg-surface border border-border"
-                }`}
+                className={`rounded-full py-4 items-center mb-3 active:opacity-80 ${canSubmit ? "bg-primary" : "bg-surface border border-border"
+                  }`}
               >
                 <Text
-                  className={`font-semibold text-sm uppercase tracking-wider ${
-                    canSubmit ? "text-white" : "text-foreground-muted"
-                  }`}
+                  className={`font-semibold text-sm uppercase tracking-wider ${canSubmit ? "text-white" : "text-foreground-muted"
+                    }`}
                 >
                   {isEditMode ? "Enregistrer les modifications" : "Ajouter l'exercice"}
                 </Text>
@@ -387,5 +382,9 @@ export default function ExerciseFormSheet({
         </View>
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+      </KeyboardAvoidingView >
+    </Modal >
   );
 }
