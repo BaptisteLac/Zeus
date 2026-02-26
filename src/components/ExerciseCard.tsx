@@ -13,12 +13,35 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSpring,
+  withSequence,
+  withDelay,
 } from "react-native-reanimated";
 import { Exercise, WorkoutEntry, ExerciseInput } from "@/lib/types";
 import { calculateProgression } from "@/lib/progression";
 import { ChargeStepper } from "./ChargeStepper";
 import { RIRSelector } from "./RIRSelector";
 import { OptionsSheet } from "./OptionsSheet";
+import { Colors } from "@/theme/colors";
+
+// ─── SetCheckmark ────────────────────────────────────────────────────────────
+// Mounts when a set transitions to "done" — triggers scale-in animation once.
+function SetCheckmark() {
+  const scale = useSharedValue(0);
+  useEffect(() => {
+    scale.value = withSequence(
+      withTiming(1.3, { duration: 180 }),
+      withSpring(1, { damping: 10, stiffness: 200 }),
+    );
+  }, []);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  return (
+    <Animated.Text style={[animStyle, { fontSize: 10, color: Colors.emotional }]}>
+      ✓
+    </Animated.Text>
+  );
+}
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -218,6 +241,45 @@ export default function ExerciseCard({
 
   const buttonConfig = getButtonConfig();
 
+  // ─── PR Detection ───────────────────────────────────────────────────────────
+  // "prior" = all entries except the most recent (which is the current session
+  // after save). If history doesn't yet include the current save, all entries
+  // are prior — either way charge > maxPriorCharge signals a new record.
+  const priorEntries = history.slice(0, history.length > 0 ? -1 : 0);
+  const maxPriorCharge =
+    priorEntries.length > 0
+      ? Math.max(...priorEntries.map((h) => h.charge))
+      : 0;
+  const isPR = saved && maxPriorCharge > 0 && charge > maxPriorCharge;
+
+  // ─── PR Animations ──────────────────────────────────────────────────────────
+  const prBadgeScale = useSharedValue(0);
+  const prGlowOpacity = useSharedValue(0);
+
+  const prBadgeStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: prBadgeScale.value }],
+    opacity: prBadgeScale.value,
+  }));
+  const prGlowStyle = useAnimatedStyle(() => ({
+    opacity: prGlowOpacity.value,
+  }));
+
+  useEffect(() => {
+    if (isPR) {
+      // Badge: scale 0 → 1.2 → 1 in 600ms total
+      prBadgeScale.value = withSequence(
+        withTiming(1.2, { duration: 300 }),
+        withTiming(1, { duration: 300 }),
+      );
+      // Glow: fade in, hold 2.4s, fade out
+      prGlowOpacity.value = withSequence(
+        withTiming(1, { duration: 300 }),
+        withDelay(2400, withTiming(0, { duration: 300 })),
+      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [isPR]);
+
   const confirmDelete = () => {
     Alert.alert(
       `Supprimer ${exercise.name} ?`,
@@ -233,12 +295,14 @@ export default function ExerciseCard({
     );
   };
 
-  // Card border color
-  const cardBorderClass = saved
-    ? "border-emotional/20"
+  // Card border color — 4 états visuels (spec Phase 4)
+  const cardBorderClass = isPR
+    ? "border-achievement"         // PR détecté : bordure achievement
+    : saved
+    ? "border-border"              // Terminée : bordure neutre (glow assure la distinction)
     : isExpanded
-      ? "border-accent/30"
-      : "border-border";
+    ? "border-accent/30"           // En cours : bordure accent
+    : "border-border";             // À faire : bordure neutre
 
   // Status badge
   const statusLabel = saved ? "VALIDÉ" : isExpanded ? "EN COURS" : "EN ATTENTE";
@@ -256,10 +320,24 @@ export default function ExerciseCard({
   return (
     <>
       <View
-        className={`rounded-2xl border overflow-hidden ${cardBorderClass} ${saved ? "opacity-70" : ""
-          }`}
-        style={{ backgroundColor: "#1C1C1E" }}
+        className={`relative rounded-card border overflow-hidden bg-surface ${cardBorderClass}`}
       >
+        {/* Terminée — glow emotional 8% (statique) */}
+        {saved && !isPR && (
+          <View
+            pointerEvents="none"
+            className="absolute inset-0 bg-emotional/8"
+          />
+        )}
+        {/* PR — glow achievement 6% (animé, disparaît après 3s) */}
+        {isPR && (
+          <Animated.View
+            pointerEvents="none"
+            style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, prGlowStyle]}
+            className="bg-achievement/6"
+          />
+        )}
+
         {/* Header — tap to toggle, long-press to edit */}
         <Pressable
           onPress={() => onToggle?.()}
@@ -282,6 +360,17 @@ export default function ExerciseCard({
                 <Text className="text-foreground-muted text-xs mt-1">
                   {exercise.repsMin}–{exercise.repsMax} reps · RIR {exercise.rir}
                 </Text>
+              )}
+              {/* Badge PR — scale 0→1.2→1 en 600ms via reanimated */}
+              {isPR && (
+                <Animated.View
+                  style={prBadgeStyle}
+                  className="self-start mt-2 px-2.5 py-0.5 rounded-full bg-achievement/15 border border-achievement/40"
+                >
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.achievement }}>
+                    🏆 PR — {charge} kg
+                  </Text>
+                </Animated.View>
               )}
             </View>
 
@@ -344,12 +433,22 @@ export default function ExerciseCard({
         {/* Expanded content */}
         {isExpanded && (
           <View className="px-4 pb-4 gap-4">
-            {/* Last entry */}
-            {lastEntry && (
-              <View className="flex-row justify-end">
-                <Text className="text-foreground-muted text-xs font-mono">
-                  Dernière séance · {lastEntry.charge} kg ({lastEntry.sets.join("-")})
-                </Text>
+            {/* 3 dernières séances */}
+            {history.length > 0 && (
+              <View className="gap-0.5">
+                {history
+                  .slice(-3)
+                  .reverse()
+                  .map((entry, idx) => (
+                    <View key={idx} className="flex-row justify-end items-center gap-1.5">
+                      <Text className="text-foreground-subtle text-[10px] font-mono">
+                        {idx === 0 ? "S-1" : idx === 1 ? "S-2" : "S-3"}
+                      </Text>
+                      <Text className="text-foreground-muted text-xs font-mono">
+                        {entry.charge} kg · {entry.sets.join("-")} · RIR {entry.rir}
+                      </Text>
+                    </View>
+                  ))}
               </View>
             )}
 
@@ -422,14 +521,19 @@ export default function ExerciseCard({
                       className="flex-col items-center gap-1.5"
                       style={{ minWidth: 64, flex: 1 }}
                     >
-                      <Text
-                        className={`text-[10px] uppercase tracking-widest ${state === "active"
-                          ? "text-accent font-semibold"
-                          : "text-foreground-muted"
+                      {state === "done" ? (
+                        <SetCheckmark />
+                      ) : (
+                        <Text
+                          className={`text-[10px] uppercase tracking-widest ${
+                            state === "active"
+                              ? "text-accent font-semibold"
+                              : "text-foreground-muted"
                           }`}
-                      >
-                        {state === "done" ? "✓" : `S${i + 1}`}
-                      </Text>
+                        >
+                          {`S${i + 1}`}
+                        </Text>
+                      )}
                       <Pressable
                         className={`w-full rounded-xl border ${chipBg}`}
                         onPress={() => setActiveSetIndex(i)}

@@ -11,4 +11,6 @@
 ## Identifié lors de Phase 2 (Buttons)
 - [ ] src/theme/colors.ts — ajouter `emotionalPressed: '#C24D29'`
 - [ ] tailwind.config.js — ajouter borderRadius: card (16px), input (12px), action (9999px)
-```
+
+## Identifié lors de Phase 4 (ExerciseCard)
+- [ ] app/(tabs)/index.tsx — vérifier les couleurs hardcodées (opacity-70, #1C1C1E) → remplacer par tokens (Phase 10)
