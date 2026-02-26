@@ -50,6 +50,8 @@ export const Colors = {
   accent: '#C47A3D',
   /** Validation — "Tu viens d'accomplir quelque chose" */
   emotional: '#E05D36',
+  /** État pressé du bouton primary (Button.tsx) */
+  emotionalPressed: '#C24D29',
   /** Achievement / PR — "Tu viens de te dépasser" */
   achievement: '#FF8C42',
 } as const;

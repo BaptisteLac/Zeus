@@ -67,6 +67,9 @@ module.exports = {
         },
       },
       borderRadius: {
+        card: "16px",
+        input: "12px",
+        action: "9999px",
         xl: "16px",
         "2xl": "20px",
         "3xl": "24px",
