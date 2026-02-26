@@ -14,3 +14,35 @@
 
 ## Identifié lors de Phase 4 (ExerciseCard)
 - [ ] app/(tabs)/index.tsx — vérifier les couleurs hardcodées (opacity-70, #1C1C1E) → remplacer par tokens (Phase 10)
+
+## Identifié lors de Phase 5 (Numeric Input)
+- [ ] ChargeStepper.tsx → remplacer par NumericInput + AdjustButtons (Phase 10)
+- [ ] RIRSelector.tsx → évaluer migration vers RIRPicker (optionnel, les deux peuvent coexister)
+- [ ] app/_layout.tsx → ajouter BottomSheetModalProvider si migration vers @gorhom/bottom-sheet
+
+## Identifié lors de Phase 6 (Timer)
+- [ ] app/(tabs)/index.tsx — remplacer state local timer + <RestTimer /> par useTimer().startTimer() (Phase 10)
+- [ ] ExerciseCard.tsx — évaluer appel direct useTimer() vs prop onStartTimer (Phase 10)
+
+## Identifié lors de Phase 7 (Système émotionnel)
+- [ ] ExerciseCard.tsx → remplacer badge inline par <PRBadge /> + <PRGlow />, supprimer prBadgeScale/prBadgeStyle/prGlowOpacity (Phase 10)
+- [ ] Button, AdjustButtons, RIRPicker, DynamicIslandPill, TimerContext → remplacer Haptics.* direct par useHaptics() (Phase 10, composant par composant)
+- [ ] app/(tabs)/index.tsx → ajouter MilestoneToast halfway quand 50% exercices terminés (Phase 10)
+
+### Cascade accumulée pour Phase 10
+- [ ] index.tsx → useTimer().startTimer() + supprimer <RestTimer />
+- [ ] index.tsx → MilestoneToast halfway
+- [ ] ExerciseCard → <PRBadge /> + <PRGlow /> au lieu du badge inline
+- [ ] ExerciseCard → useTimer() direct vs prop onStartTimer
+- [ ] ChargeStepper → remplacer par NumericInput + AdjustButtons
+- [ ] RIRSelector → évaluer migration vers RIRPicker
+- [ ] Tous composants → Haptics.* direct → useHaptics()
+- [ ] index.tsx → couleurs hardcodées → tokens
+- [ ] _layout.tsx → BottomSheetModalProvider (si besoin)
+
+## Identifié lors de Phase 9 (Auto-save)
+- [ ] index.tsx → remplacer saveState() par saveImmediate() dans handleSaveExercise/handleUpdateExercise
+- [ ] index.tsx → ajouter saveDebounced sur inputs charge/reps
+- [ ] index.tsx → bottom sheet "Reprendre / Abandonner" si pendingSession !== null
+- [ ] index.tsx → appeler dismissPending() après handleReset (fin de séance)
+- [ ] ExerciseCard.tsx → passer saveDebounced comme prop aux NumericInput onChange
