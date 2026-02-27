@@ -283,11 +283,11 @@ export default function ExerciseCard({
     ? progression.nextCharge
     : lastEntry
       ? lastEntry.charge
-      : 0;
+      : exercise.charge;
 
   const [charge, setCharge] = useState(defaultCharge);
   const [sets, setSets] = useState<number[]>(
-    Array.from({ length: exercise.sets }, (_, i) =>
+    Array.from({ length: exercise.setsMin }, (_, i) =>
       lastEntry?.sets[i] !== undefined ? lastEntry.sets[i] : 0
     )
   );
@@ -296,7 +296,7 @@ export default function ExerciseCard({
   const [savedValues, setSavedValues] = useState<ExerciseInput | null>(null);
   const [activeSetIndex, setActiveSetIndex] = useState(0);
   const [completedSets, setCompletedSets] = useState<Set<number>>(
-    () => saved ? new Set(Array.from({ length: exercise.sets }, (_, i) => i)) : new Set()
+    () => saved ? new Set(Array.from({ length: exercise.setsMin }, (_, i) => i)) : new Set()
   );
   const [showOptions, setShowOptions] = useState(false);
 
@@ -309,17 +309,17 @@ export default function ExerciseCard({
   // Resync sets when exercise definition changes
   useEffect(() => {
     setSets((prev) => {
-      if (prev.length === exercise.sets) return prev;
-      return Array.from({ length: exercise.sets }, (_, i) => prev[i] ?? 0);
+      if (prev.length === exercise.setsMin) return prev;
+      return Array.from({ length: exercise.setsMin }, (_, i) => prev[i] ?? 0);
     });
     setCompletedSets((prev) => {
       const next = new Set(prev);
       for (const idx of next) {
-        if (idx >= exercise.sets) next.delete(idx);
+        if (idx >= exercise.setsMin) next.delete(idx);
       }
       return next;
     });
-  }, [exercise.sets]);
+  }, [exercise.setsMin]);
 
   // Track modifications after save
   useEffect(() => {
@@ -595,7 +595,7 @@ export default function ExerciseCard({
             {!isExpanded && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <Text style={{ fontSize: 13, color: Colors.foregroundMuted }}>
-                  {exercise.sets} × {exercise.repsMin}–{exercise.repsMax} reps
+                  {exercise.setsMin}–{exercise.setsMax} × {exercise.repsMin}–{exercise.repsMax} reps
                 </Text>
                 {lastEntry && (
                   <Text style={{

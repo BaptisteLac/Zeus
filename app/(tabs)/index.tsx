@@ -34,6 +34,7 @@ import ExerciseCard from "@/components/ExerciseCard";
 import ExerciseFormSheet from "@/components/ExerciseFormSheet";
 import SessionSummary from "@/components/SessionSummary";
 import AuthModal from "@/components/AuthModal";
+import { SwipeableSerieRow } from "@/components/SwipeableSerieRow";
 
 const nextSession: Record<SessionType, SessionType> = { A: "B", B: "C", C: "A" };
 
@@ -53,6 +54,9 @@ export default function WorkoutScreen() {
   // Session summary
   const [showSummary, setShowSummary] = useState(false);
 
+  // End session confirmation sheet
+  const [showEndSheet, setShowEndSheet] = useState(false);
+
   // Auth modal
   const [showAuth, setShowAuth] = useState(false);
 
@@ -71,9 +75,29 @@ export default function WorkoutScreen() {
   // ── Load state ──────────────────────────────────────────────────────────────
   useEffect(() => {
     loadState().then((loaded) => {
+      // Migration : si customExercises n'existe pas, on l'initialise
       if (!loaded.customExercises) {
         loaded = { ...loaded, customExercises: initCustomExercises() };
         saveImmediate(loaded);
+      } else {
+        // Migration v2 : ancien format avait `sets` au lieu de `setsMin/setsMax`
+        const needsMigration = Object.values(loaded.customExercises)
+          .flat()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .some((ex: any) => ex.sets !== undefined && ex.setsMin === undefined);
+        if (needsMigration) {
+          const migrated = { ...loaded.customExercises };
+          for (const session of ['A', 'B', 'C'] as const) {
+            migrated[session] = (loaded.customExercises[session] || []).map((ex: any) => ({
+              ...ex,
+              setsMin: ex.setsMin ?? ex.sets ?? 3,
+              setsMax: ex.setsMax ?? ex.sets ?? 3,
+              charge: ex.charge ?? 0,
+            }));
+          }
+          loaded = { ...loaded, customExercises: migrated };
+          saveImmediate(loaded);
+        }
       }
       const { block, week } = computeBlock(loaded.programStartDate);
       setState({ ...loaded, currentBlock: block as 1 | 2 | 3, weekNumber: week });
@@ -91,8 +115,26 @@ export default function WorkoutScreen() {
       setUserEmail(email);
       if (authenticated) {
         loadState().then((loaded) => {
-          if (!loaded.customExercises)
+          if (!loaded.customExercises) {
             loaded = { ...loaded, customExercises: initCustomExercises() };
+          } else {
+            const needsMigration = Object.values(loaded.customExercises)
+              .flat()
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              .some((ex: any) => ex.sets !== undefined && ex.setsMin === undefined);
+            if (needsMigration) {
+              const migrated = { ...loaded.customExercises };
+              for (const session of ['A', 'B', 'C'] as const) {
+                migrated[session] = (loaded.customExercises[session] || []).map((ex: any) => ({
+                  ...ex,
+                  setsMin: ex.setsMin ?? ex.sets ?? 3,
+                  setsMax: ex.setsMax ?? ex.sets ?? 3,
+                  charge: ex.charge ?? 0,
+                }));
+              }
+              loaded = { ...loaded, customExercises: migrated };
+            }
+          }
           setState(loaded);
         });
       }
@@ -112,12 +154,8 @@ export default function WorkoutScreen() {
     [state.currentSession, state.currentBlock, state.customExercises]
   );
 
-  // Auto-expand first exercise when list changes
-  useEffect(() => {
-    if (exercises.length > 0 && expandedExerciseId === null) {
-      setExpandedExerciseId(exercises[0].id);
-    }
-  }, [exercises]);
+  // Pas d'auto-expand au chargement ni après modification de la liste.
+  // L'auto-expand se fait uniquement après sauvegarde d'un exercice (handleSaveExercise).
 
   // ── Milestone : halfway detection ─────────────────────────────────────────────
   // halfwayShownRef empêche deux cas parasites :
@@ -216,6 +254,8 @@ export default function WorkoutScreen() {
       next.delete(exerciseId);
       return next;
     });
+    // Ferme la card si c'est elle qui était ouverte
+    setExpandedExerciseId((prev) => (prev === exerciseId ? null : prev));
   }, [saveImmediate]);
 
   const handleAddExercise = useCallback(
@@ -291,20 +331,7 @@ export default function WorkoutScreen() {
   );
 
   const handleFinishSession = () => {
-    const unsaved = exercises.filter((ex) => !savedExercises.has(ex.id));
-
-    if (unsaved.length > 0) {
-      Alert.alert(
-        "Séance incomplète",
-        `${unsaved.length} exercice(s) non sauvegardé(s). Terminer quand même ?`,
-        [
-          { text: "Annuler", style: "cancel" },
-          { text: "Terminer", onPress: () => setShowSummary(true) },
-        ]
-      );
-      return;
-    }
-    setShowSummary(true);
+    setShowEndSheet(true);
   };
 
   const handleConfirmFinish = () => {
@@ -388,7 +415,7 @@ export default function WorkoutScreen() {
         {/* Exercise list */}
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 12 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 12 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -419,28 +446,32 @@ export default function WorkoutScreen() {
           ) : (
             <>
               {exercises.map((exercise) => (
-                <ExerciseCard
+                <SwipeableSerieRow
                   key={exercise.id}
-                  exercise={exercise}
-                  history={state.workoutData[exercise.id] || []}
-                  onSave={(input: ExerciseInput) => handleSaveExercise(exercise.id, input)}
-                  onUpdate={(input: ExerciseInput) => handleUpdateExercise(exercise.id, input)}
-                  onStartTimer={(seconds) =>
-                    startTimer({ duration: seconds, exerciseName: exercise.name, nextSet: '' })
-                  }
-                  onEditDefinition={() => {
-                    setEditingExercise(exercise);
-                    setShowForm(true);
-                  }}
                   onDelete={() => handleDeleteExercise(exercise.id)}
-                  saved={savedExercises.has(exercise.id)}
-                  isExpanded={expandedExerciseId === exercise.id}
-                  onToggle={() =>
-                    setExpandedExerciseId(
-                      expandedExerciseId === exercise.id ? null : exercise.id
-                    )
-                  }
-                />
+                >
+                  <ExerciseCard
+                    exercise={exercise}
+                    history={state.workoutData[exercise.id] || []}
+                    onSave={(input: ExerciseInput) => handleSaveExercise(exercise.id, input)}
+                    onUpdate={(input: ExerciseInput) => handleUpdateExercise(exercise.id, input)}
+                    onStartTimer={(seconds) =>
+                      startTimer({ duration: seconds, exerciseName: exercise.name, nextSet: '' })
+                    }
+                    onEditDefinition={() => {
+                      setEditingExercise(exercise);
+                      setShowForm(true);
+                    }}
+                    onDelete={() => handleDeleteExercise(exercise.id)}
+                    saved={savedExercises.has(exercise.id)}
+                    isExpanded={expandedExerciseId === exercise.id}
+                    onToggle={() =>
+                      setExpandedExerciseId(
+                        expandedExerciseId === exercise.id ? null : exercise.id
+                      )
+                    }
+                  />
+                </SwipeableSerieRow>
               ))}
 
               {/* Add exercise */}
@@ -453,38 +484,120 @@ export default function WorkoutScreen() {
               >
                 <Text className="text-primary/50 text-2xl font-light">+</Text>
               </Pressable>
+              {/* Bouton Terminer la séance — footer inline, toujours visible */}
+              <Pressable
+                onPress={handleFinishSession}
+                disabled={savedExercises.size === 0}
+                className={`rounded-2xl py-5 items-center justify-center mt-3 active:opacity-75 ${savedExercises.size === 0
+                  ? 'bg-surface border border-border'
+                  : allSaved
+                    ? 'bg-emotional'
+                    : 'bg-accent'
+                  }`}
+              >
+                <Text
+                  className={`text-[13px] font-bold uppercase tracking-widest ${savedExercises.size === 0 ? 'text-foreground-subtle' : 'text-white'
+                    }`}
+                >
+                  {savedExercises.size === 0
+                    ? 'Terminer la séance'
+                    : allSaved
+                      ? `✓  Terminer la séance ${state.currentSession}`
+                      : `Terminer  ·  ${savedExercises.size}/${exercises.length} exercices`}
+                </Text>
+              </Pressable>
             </>
           )}
         </ScrollView>
 
-        {/* Finish session button */}
-        <View
-          className="absolute bottom-0 left-0 right-0 px-5"
-          style={{ paddingBottom: insets.bottom + 12, paddingTop: 16 }}
+      </SafeAreaView>
+      {/* End session confirmation sheet */}
+      {showEndSheet && (
+        <Modal
+          visible
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowEndSheet(false)}
         >
           <Pressable
-            onPress={handleFinishSession}
-            disabled={savedExercises.size === 0}
-            className={`rounded-xl py-4 items-center ${
-              allSaved
-                ? "bg-success"
-                : savedExercises.size > 0
-                ? "bg-primary"
-                : "bg-surface border border-border"
-            }`}
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}
+            onPress={() => setShowEndSheet(false)}
           >
-            <Text
-              className={`font-semibold text-[13px] uppercase tracking-wider ${
-                savedExercises.size === 0 ? "text-foreground-muted" : "text-white"
-              }`}
+            <Pressable
+              onPress={() => { }}
+              style={{
+                backgroundColor: Colors.surface,
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                padding: 24,
+                paddingBottom: insets.bottom + 24,
+                gap: 10,
+              }}
             >
-              {allSaved
-                ? `✓ Terminer la séance ${state.currentSession}`
-                : `Terminer la séance ${state.currentSession} (${savedExercises.size}/${exercises.length})`}
-            </Text>
+              {/* Titre + état */}
+              <Text style={{ color: Colors.foreground, fontSize: 18, fontWeight: '700', marginBottom: 4 }}>
+                Terminer la séance {state.currentSession} ?
+              </Text>
+
+              {/* Liste exercices */}
+              {exercises.map((ex) => (
+                <View key={ex.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 }}>
+                  <Text style={{ fontSize: 16, width: 20 }}>
+                    {savedExercises.has(ex.id) ? '✓' : '○'}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: savedExercises.has(ex.id) ? Colors.foreground : Colors.foregroundSubtle,
+                      fontWeight: savedExercises.has(ex.id) ? '500' : '400',
+                      flex: 1,
+                    }}
+                  >
+                    {ex.name}
+                  </Text>
+                  {!savedExercises.has(ex.id) && (
+                    <Text style={{ fontSize: 11, color: Colors.error, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Non sauvegardé
+                    </Text>
+                  )}
+                </View>
+              ))}
+
+              {/* Séparateur */}
+              <View style={{ height: 1, backgroundColor: Colors.border, marginVertical: 8 }} />
+
+              {/* CTA Terminer */}
+              <Pressable
+                onPress={() => {
+                  setShowEndSheet(false);
+                  setShowSummary(true);
+                }}
+                style={({ pressed }) => ({
+                  backgroundColor: allSaved ? Colors.emotional : Colors.accent,
+                  borderRadius: 14,
+                  paddingVertical: 16,
+                  alignItems: 'center',
+                  opacity: pressed ? 0.85 : 1,
+                })}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 15 }}>
+                  {allSaved ? '✓ Terminer' : 'Terminer quand même'}
+                </Text>
+              </Pressable>
+
+              {/* CTA Continuer */}
+              <Pressable
+                onPress={() => setShowEndSheet(false)}
+                style={{ borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
+              >
+                <Text style={{ color: Colors.foregroundMuted, fontWeight: '500', fontSize: 15 }}>
+                  Continuer la séance
+                </Text>
+              </Pressable>
+            </Pressable>
           </Pressable>
-        </View>
-      </SafeAreaView>
+        </Modal>
+      )}
 
       {/* Session summary */}
       <SessionSummary
@@ -543,7 +656,7 @@ export default function WorkoutScreen() {
           >
             {/* Sheet — absorbe les taps pour ne pas fermer au tap interne */}
             <Pressable
-              onPress={() => {}}
+              onPress={() => { }}
               style={{
                 backgroundColor: Colors.surface,
                 borderTopLeftRadius: 20,

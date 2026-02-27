@@ -36,8 +36,8 @@ import { Colors } from '@/theme/colors';
 
 interface SwipeableSerieRowProps {
   children: React.ReactNode;
-  /** Swipe droite→gauche : valider la série */
-  onComplete: () => void;
+  /** Swipe droite→gauche : valider la série — si absent, action désactivée */
+  onComplete?: () => void;
   /** Swipe gauche→droite : supprimer la série — si absent, action désactivée */
   onDelete?: () => void;
   /** Désactive les gestes (série déjà validée) */
@@ -70,7 +70,7 @@ export function SwipeableSerieRow({
 
   const triggerComplete = useCallback(() => {
     haptics.medium();
-    onComplete();
+    onComplete?.();
   }, [haptics, onComplete]);
 
   const triggerDelete = useCallback(() => {
@@ -90,7 +90,7 @@ export function SwipeableSerieRow({
       'worklet';
       const threshold = rowWidth.value * COMPLETE_RATIO;
 
-      if (translateX.value <= -threshold) {
+      if (translateX.value <= -threshold && onComplete) {
         // ── Swipe droite→gauche : VALIDER ────────────────────────────
         checkScale.value = withSequence(
           withTiming(1.5, { duration: 150 }),
@@ -201,31 +201,33 @@ export function SwipeableSerieRow({
         </Animated.View>
       )}
 
-      {/* ── Fond SUCCESS (droite→gauche = valider) ──────────────────── */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          successBgStyle,
-          {
-            position: 'absolute',
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: Colors.success,
-            alignItems: 'flex-end',
-            justifyContent: 'center',
-            paddingRight: 20,
-            borderRadius: 12,
-          },
-        ]}
-      >
-        <Animated.Text
+      {/* ── Fond SUCCESS (droite→gauche = valider) — uniquement si onComplete fourni ── */}
+      {onComplete && (
+        <Animated.View
+          pointerEvents="none"
           style={[
-            checkmarkStyle,
-            { color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 24 },
+            successBgStyle,
+            {
+              position: 'absolute',
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: Colors.success,
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              paddingRight: 20,
+              borderRadius: 12,
+            },
           ]}
         >
-          ✓
-        </Animated.Text>
-      </Animated.View>
+          <Animated.Text
+            style={[
+              checkmarkStyle,
+              { color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 24 },
+            ]}
+          >
+            ✓
+          </Animated.Text>
+        </Animated.View>
+      )}
 
       {/* ── Foreground ──────────────────────────────────────────────── */}
       <GestureDetector gesture={pan}>

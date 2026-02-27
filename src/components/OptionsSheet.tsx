@@ -77,7 +77,9 @@ export function OptionsSheet({
             <Pressable
               onPress={() => {
                 onClose();
-                onEdit();
+                // iOS ne peut pas présenter un nouveau modal pendant qu'un autre
+                // se dismisse. On attend la fin de l'animation de fermeture (~300ms).
+                setTimeout(() => onEdit(), 350);
               }}
               className="flex-row items-center gap-4 bg-surface-elevated rounded-2xl px-4 py-4 active:opacity-70"
             >

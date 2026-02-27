@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   View,
   Text,
   TextInput,
@@ -7,20 +8,15 @@ import {
   Modal,
   TouchableWithoutFeedback,
   ScrollView,
-  FlatList,
   Alert,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
 } from "react-native";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Exercise } from "@/lib/types";
 import { CatalogEntry } from "@/lib/program";
-import { Colors } from "@/theme/colors";
+import { Colors, BorderRadius } from "@/theme/colors";
 
 interface ExerciseFormSheetProps {
   open: boolean;
@@ -33,15 +29,76 @@ interface ExerciseFormSheetProps {
 
 const DEFAULTS: Omit<Exercise, "id"> = {
   name: "",
-  sets: 3,
+  setsMin: 3,
+  setsMax: 4,
   repsMin: 8,
   repsMax: 12,
+  charge: 0,
   rest: 90,
   rir: "1",
 };
 
 const RIR_OPTIONS = ["0", "1", "1-2", "2", "2-3"] as const;
 
+// ─── Label section ────────────────────────────────────────────────────────────
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <Text style={styles.sectionLabel}>{children}</Text>
+  );
+}
+
+// ─── Stepper générique ────────────────────────────────────────────────────────
+interface StepperProps {
+  label: string;
+  value: number | "";
+  onChange: (v: number | "") => void;
+  step?: number;
+  min?: number;
+  suffix?: string;
+}
+function Stepper({ label, value, onChange, step = 1, min = 0, suffix }: StepperProps) {
+  const numVal = (value as number) || 0;
+  return (
+    <View style={{ flex: 1 }}>
+      <SectionLabel>{label}</SectionLabel>
+      <View style={styles.stepperRow}>
+        {/* − */}
+        <Pressable
+          onPress={() => onChange(Math.max(min, numVal - step))}
+          style={({ pressed }) => [styles.stepperBtn, pressed && styles.stepperBtnPressed]}
+        >
+          <Text style={styles.stepperBtnText}>−</Text>
+        </Pressable>
+
+        {/* Valeur */}
+        <View style={styles.stepperValueArea}>
+          <TextInput
+            value={value === "" ? "" : String(value)}
+            onChangeText={(t) => {
+              if (t === "") { onChange(""); return; }
+              const n = parseFloat(t.replace(",", "."));
+              if (!isNaN(n)) onChange(Math.max(min, n));
+            }}
+            keyboardType="numeric"
+            selectTextOnFocus
+            style={styles.stepperInput}
+          />
+          {suffix && <Text style={styles.stepperSuffix}>{suffix}</Text>}
+        </View>
+
+        {/* + */}
+        <Pressable
+          onPress={() => onChange(numVal + step)}
+          style={({ pressed }) => [styles.stepperBtn, pressed && styles.stepperBtnPressed]}
+        >
+          <Text style={styles.stepperBtnText}>+</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// ─── ExerciseFormSheet ────────────────────────────────────────────────────────
 export default function ExerciseFormSheet({
   open,
   onOpenChange,
@@ -53,89 +110,91 @@ export default function ExerciseFormSheet({
   const insets = useSafeAreaInsets();
   const isEditMode = !!exercise;
 
+  // ── State ──────────────────────────────────────────────────────────────────
   const [name, setName] = useState("");
-  const [sets, setSets] = useState<number | "">(3);
-  const [repsMin, setRepsMin] = useState<number | "">(8);
-  const [repsMax, setRepsMax] = useState<number | "">(12);
-  const [rest, setRest] = useState<number | "">(90);
-  const [rir, setRir] = useState("1");
+  const [setsMin, setSetsMin] = useState<number | "">(DEFAULTS.setsMin);
+  const [setsMax, setSetsMax] = useState<number | "">(DEFAULTS.setsMax);
+  const [repsMin, setRepsMin] = useState<number | "">(DEFAULTS.repsMin);
+  const [repsMax, setRepsMax] = useState<number | "">(DEFAULTS.repsMax);
+  const [charge, setCharge] = useState<number | "">(DEFAULTS.charge);
+  const [rir, setRir] = useState(DEFAULTS.rir);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Slide-up animation
-  const translateY = useSharedValue(600);
-  const opacity = useSharedValue(0);
+  // ── Animation (RN Animated, pas Reanimated) ────────────────────────────────
+  const translateY = useRef(new Animated.Value(500)).current;
+  const backdrop = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (open) {
-      opacity.value = withTiming(1, { duration: 200 });
-      translateY.value = withTiming(0, { duration: 300 });
-      // Populate form
+      // Populate
       if (exercise) {
         setName(exercise.name);
-        setSets(exercise.sets);
+        setSetsMin(exercise.setsMin);
+        setSetsMax(exercise.setsMax);
         setRepsMin(exercise.repsMin);
         setRepsMax(exercise.repsMax);
-        setRest(exercise.rest);
+        setCharge(exercise.charge);
         setRir(exercise.rir);
       } else {
         setName(DEFAULTS.name);
-        setSets(DEFAULTS.sets);
+        setSetsMin(DEFAULTS.setsMin);
+        setSetsMax(DEFAULTS.setsMax);
         setRepsMin(DEFAULTS.repsMin);
         setRepsMax(DEFAULTS.repsMax);
-        setRest(DEFAULTS.rest);
+        setCharge(DEFAULTS.charge);
         setRir(DEFAULTS.rir);
       }
       setShowSuggestions(false);
+      // Slide up
+      Animated.parallel([
+        Animated.timing(backdrop, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.spring(translateY, { toValue: 0, damping: 26, stiffness: 280, useNativeDriver: true }),
+      ]).start();
     } else {
-      opacity.value = withTiming(0, { duration: 180 });
-      translateY.value = withTiming(600, { duration: 240 });
+      Animated.parallel([
+        Animated.timing(backdrop, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 500, duration: 240, useNativeDriver: true }),
+      ]).start();
     }
   }, [open, exercise]);
 
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
-
-  // Autocomplete
-  const filteredCatalog = useMemo(() => {
-    if (!name.trim() || isEditMode) return [];
-    const q = name.toLowerCase().trim();
-    return catalog.filter((e) => e.name.toLowerCase().includes(q));
-  }, [name, catalog, isEditMode]);
-
+  // ── Autocomplete ───────────────────────────────────────────────────────────
+  const filteredCatalog = catalog
+    .filter((e) => !isEditMode && name.trim() && e.name.toLowerCase().includes(name.toLowerCase().trim()))
+    .slice(0, 5);
   const exactMatch = filteredCatalog.find(
     (e) => e.name.toLowerCase().trim() === name.toLowerCase().trim()
   );
 
   const handleSelectEntry = (entry: CatalogEntry) => {
     setName(entry.name);
-    setSets(entry.sets);
+    setSetsMin(entry.setsMin);
+    setSetsMax(entry.setsMax);
     setRepsMin(entry.repsMin);
     setRepsMax(entry.repsMax);
-    setRest(entry.rest);
+    setCharge(entry.charge);
     setRir(entry.rir);
     setShowSuggestions(false);
   };
 
+  // ── Validation ─────────────────────────────────────────────────────────────
   const canSubmit =
     name.trim().length > 0 &&
-    typeof sets === "number" &&
-    sets > 0 &&
-    typeof repsMin === "number" &&
-    repsMin > 0 &&
-    typeof repsMax === "number" &&
-    repsMax >= repsMin &&
-    typeof rest === "number";
+    typeof setsMin === "number" && setsMin > 0 &&
+    typeof setsMax === "number" && setsMax >= setsMin &&
+    typeof repsMin === "number" && repsMin > 0 &&
+    typeof repsMax === "number" && repsMax >= repsMin;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
     onSubmit({
       name: name.trim(),
-      sets: sets as number,
+      setsMin: setsMin as number,
+      setsMax: setsMax as number,
       repsMin: repsMin as number,
       repsMax: repsMax as number,
-      rest: rest as number,
+      charge: typeof charge === "number" ? charge : 0,
+      rest: 90,
       rir,
     });
     onOpenChange(false);
@@ -147,112 +206,58 @@ export default function ExerciseFormSheet({
       "L'exercice sera retiré de ta séance. L'historique sera conservé.",
       [
         { text: "Annuler", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: () => {
-            onDelete?.();
-            onOpenChange(false);
-          },
-        },
+        { text: "Supprimer", style: "destructive", onPress: () => { onDelete?.(); onOpenChange(false); } },
       ]
     );
   };
 
-  const numField = (
-    label: string,
-    value: number | "",
-    onChange: (v: number | "") => void,
-    opts?: { step?: number; min?: number }
-  ) => (
-    <View className="flex-1">
-      <Text className="text-foreground-muted text-[11px] uppercase tracking-wider mb-2 text-center">
-        {label}
-      </Text>
-      <View className="flex-row items-center bg-surface rounded-xl h-12 overflow-hidden">
-        <Pressable
-          onPress={() =>
-            onChange(
-              Math.max(opts?.min ?? 0, ((value as number) || 0) - (opts?.step ?? 1))
-            )
-          }
-          className="w-10 h-full items-center justify-center active:bg-white/5"
-        >
-          <Text className="text-foreground text-lg font-light">−</Text>
-        </Pressable>
-        <TextInput
-          value={value === "" ? "" : String(value)}
-          onChangeText={(t) => {
-            if (t === "" || t === "-") {
-              onChange("");
-              return;
-            }
-            const n = parseInt(t);
-            if (!isNaN(n)) onChange(Math.max(opts?.min ?? 0, n));
-          }}
-          keyboardType="numeric"
-          className="flex-1 text-center text-base font-mono text-primary"
-          style={{ minHeight: 48 }}
-        />
-        <Pressable
-          onPress={() =>
-            onChange(((value as number) || 0) + (opts?.step ?? 1))
-          }
-          className="w-10 h-full items-center justify-center active:bg-white/5"
-        >
-          <Text className="text-foreground text-lg font-light">+</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-
-  if (!open) return null;
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <Modal visible={open} transparent animationType="none" onRequestClose={() => onOpenChange(false)}>
+    <Modal
+      visible={open}
+      transparent
+      animationType="none"
+      onRequestClose={() => onOpenChange(false)}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1, justifyContent: "flex-end" }}>
-          {/* Backdrop */}
+
+          {/* ── Backdrop ──────────────────────────────────────────── */}
           <TouchableWithoutFeedback onPress={() => onOpenChange(false)}>
             <Animated.View
               style={[
-                { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)" },
-                backdropStyle,
+                StyleSheet.absoluteFillObject,
+                { backgroundColor: "rgba(0,0,0,0.65)", opacity: backdrop },
               ]}
             />
           </TouchableWithoutFeedback>
 
-          {/* Sheet */}
+          {/* ── Sheet ─────────────────────────────────────────────── */}
           <Animated.View
-            style={[sheetStyle, { backgroundColor: Colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%" }]}
+            style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 8), transform: [{ translateY }] }]}
           >
             {/* Handle */}
-            <View className="w-10 h-1 bg-border rounded-full mx-auto mt-3 mb-5" />
+            <View style={styles.handle} />
 
             <ScrollView
-              style={{ flex: 1 }}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}
               showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
             >
-              {/* Title */}
-              <Text className="text-foreground text-2xl font-semibold mb-1">
+              {/* ── Header ──────────────────────────────────────── */}
+              <Text style={styles.title}>
                 {isEditMode ? "Modifier l'exercice" : "Nouvel exercice"}
               </Text>
-              <Text className="text-foreground-muted text-sm mb-6">
-                {isEditMode
-                  ? "Modifie les paramètres"
-                  : "Ajoute un exercice à ta séance"}
+              <Text style={styles.subtitle}>
+                {isEditMode ? "Paramètres cibles de l'exercice" : "Définis les paramètres de départ"}
               </Text>
 
-              {/* Name field + suggestions */}
-              <View className="mb-5">
-                <Text className="text-foreground-muted text-[11px] uppercase tracking-wider mb-2">
-                  Nom de l'exercice
-                </Text>
+              {/* ── Nom ─────────────────────────────────────────── */}
+              <View style={styles.fieldBlock}>
+                <SectionLabel>Nom de l'exercice</SectionLabel>
                 <TextInput
                   value={name}
                   onChangeText={(t) => {
@@ -263,141 +268,469 @@ export default function ExerciseFormSheet({
                   placeholderTextColor={Colors.foregroundSubtle}
                   autoCorrect={false}
                   autoCapitalize="words"
-                  className="bg-surface border border-border rounded-xl px-4 py-3 text-foreground text-base"
-                  style={{ minHeight: 48 }}
+                  style={styles.textInput}
                 />
 
-                {/* Autocomplete list */}
+                {/* Autocomplete */}
                 {showSuggestions && !isEditMode && (filteredCatalog.length > 0 || !exactMatch) && (
-                  <View className="mt-1 bg-surface-elevated border border-border rounded-xl overflow-hidden">
-                    {filteredCatalog.slice(0, 5).map((entry, idx, arr) => (
+                  <View style={styles.autocompleteBox}>
+                    {filteredCatalog.map((entry, idx) => (
                       <Pressable
                         key={entry.name}
                         onPress={() => handleSelectEntry(entry)}
-                        className={`flex-row items-center justify-between px-4 py-3 active:bg-white/5 ${idx < arr.length - 1 ? "border-b border-border/50" : ""
-                          }`}
+                        style={({ pressed }) => [
+                          styles.autocompleteItem,
+                          idx < filteredCatalog.length - 1 && styles.autocompleteItemBorder,
+                          pressed && { backgroundColor: Colors.surfaceElevated + "80" },
+                        ]}
                       >
-                        <View className="flex-1 mr-3">
-                          <Text className="text-foreground text-sm font-medium">
-                            {entry.name}
-                          </Text>
-                          <Text className="text-foreground-muted text-xs mt-0.5">
-                            {entry.sets}×{entry.repsMin}–{entry.repsMax} · {entry.rest}s repos
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.autocompleteItemName}>{entry.name}</Text>
+                          <Text style={styles.autocompleteItemMeta}>
+                            {entry.setsMin}–{entry.setsMax} séries · {entry.repsMin}–{entry.repsMax} reps
                           </Text>
                         </View>
-                        <View className="flex-row gap-1">
+                        <View style={{ flexDirection: "row", gap: 4 }}>
                           {entry.sessions.map((s) => (
-                            <View
-                              key={s}
-                              className="w-5 h-5 rounded-full bg-white/10 items-center justify-center"
-                            >
-                              <Text className="text-foreground-muted text-[10px] font-semibold">
-                                {s}
-                              </Text>
+                            <View key={s} style={styles.sessionBadge}>
+                              <Text style={styles.sessionBadgeText}>{s}</Text>
                             </View>
                           ))}
                         </View>
                       </Pressable>
                     ))}
-
                     {!exactMatch && name.trim().length > 0 && (
                       <Pressable
                         onPress={() => setShowSuggestions(false)}
-                        className="flex-row items-center gap-3 px-4 py-3 active:bg-primary/10"
+                        style={({ pressed }) => [
+                          styles.autocompleteCreate,
+                          pressed && { backgroundColor: Colors.accent + "18" },
+                        ]}
                       >
-                        <View className="w-5 h-5 rounded-full bg-primary/10 items-center justify-center">
-                          <Text className="text-primary text-xs">+</Text>
+                        <View style={styles.createIcon}>
+                          <Text style={{ color: Colors.accent, fontSize: 12, lineHeight: 16 }}>+</Text>
                         </View>
-                        <Text className="text-primary text-sm font-medium">
-                          Créer « {name.trim()} »
-                        </Text>
+                        <Text style={styles.autocompleteCreateText}>Créer « {name.trim()} »</Text>
                       </Pressable>
                     )}
                   </View>
                 )}
               </View>
 
-              {/* Séries + Repos */}
-              <View className="flex-row gap-3 mb-5">
-                {numField("Séries", sets, setSets, { min: 1 })}
-                {numField("Repos (s)", rest, setRest, { step: 15, min: 0 })}
+              {/* ── Charge ──────────────────────────────────────── */}
+              <View style={styles.fieldBlock}>
+                <SectionLabel>Charge initiale</SectionLabel>
+                <View style={styles.chargeRow}>
+                  <Pressable
+                    onPress={() => setCharge(Math.max(0, ((charge as number) || 0) - 2.5))}
+                    style={({ pressed }) => [styles.chargeBtn, pressed && styles.stepperBtnPressed]}
+                  >
+                    <Text style={styles.chargeBtnText}>−2.5</Text>
+                  </Pressable>
+                  <View style={styles.chargeValueBox}>
+                    <TextInput
+                      value={charge === 0 || charge === "" ? "" : String(charge)}
+                      onChangeText={(t) => {
+                        if (t === "") { setCharge(""); return; }
+                        const n = parseFloat(t.replace(",", "."));
+                        if (!isNaN(n)) setCharge(Math.max(0, n));
+                      }}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      placeholderTextColor={Colors.foregroundSubtle}
+                      selectTextOnFocus
+                      style={styles.chargeInput}
+                    />
+                    <Text style={styles.chargeUnit}>kg</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setCharge(((charge as number) || 0) + 2.5)}
+                    style={({ pressed }) => [styles.chargeBtn, pressed && styles.stepperBtnPressed]}
+                  >
+                    <Text style={styles.chargeBtnText}>+2.5</Text>
+                  </Pressable>
+                </View>
               </View>
 
-              {/* Reps min + max */}
-              <View className="flex-row gap-3 mb-5">
-                {numField("Reps Min", repsMin, setRepsMin, { min: 1 })}
-                {numField("Reps Max", repsMax, setRepsMax, { min: 1 })}
+              {/* ── Séries ──────────────────────────────────────── */}
+              <View style={[styles.fieldBlock, styles.rowGroup]}>
+                <Stepper label="Séries Min" value={setsMin} onChange={setSetsMin} min={1} />
+                <View style={styles.rowDivider} />
+                <Stepper label="Séries Max" value={setsMax} onChange={setSetsMax} min={1} />
               </View>
 
-              {/* RIR cible */}
-              <View className="mb-6">
-                <Text className="text-foreground-muted text-[11px] uppercase tracking-wider mb-2 text-center">
-                  RIR Cible
-                </Text>
-                <View className="flex-row bg-surface rounded-xl p-1 gap-1">
+              {/* ── Reps ────────────────────────────────────────── */}
+              <View style={[styles.fieldBlock, styles.rowGroup]}>
+                <Stepper label="Reps Min" value={repsMin} onChange={setRepsMin} min={1} />
+                <View style={styles.rowDivider} />
+                <Stepper label="Reps Max" value={repsMax} onChange={setRepsMax} min={1} />
+              </View>
+
+              {/* ── RIR ─────────────────────────────────────────── */}
+              <View style={styles.fieldBlock}>
+                <SectionLabel>RIR Cible</SectionLabel>
+                <View style={styles.rirRow}>
                   {RIR_OPTIONS.map((val) => (
                     <Pressable
                       key={val}
                       onPress={() => setRir(val)}
-                      className={`flex-1 h-10 rounded-lg items-center justify-center ${rir === val ? "bg-primary" : ""
-                        }`}
+                      style={[styles.rirPill, rir === val && styles.rirPillActive]}
                     >
-                      <Text
-                        className={`text-sm font-mono ${rir === val
-                          ? "text-white font-semibold"
-                          : "text-foreground-muted"
-                          }`}
-                      >
+                      <Text style={[styles.rirPillText, rir === val && styles.rirPillTextActive]}>
                         {val}
                       </Text>
                     </Pressable>
                   ))}
                 </View>
               </View>
-
             </ScrollView>
 
-            {/* ── Footer fixe — Thumb Zone ───────────────────────────────────── */}
-            <View
-              style={{
-                paddingHorizontal: 20,
-                paddingTop: 12,
-                paddingBottom: Math.max(insets.bottom, 16),
-                gap: 10,
-                borderTopWidth: 1,
-                borderTopColor: Colors.border,
-              }}
-            >
-              {/* Submit */}
+            {/* ── Footer ────────────────────────────────────────── */}
+            <View style={styles.footer}>
               <Pressable
                 onPress={handleSubmit}
                 disabled={!canSubmit}
-                className={`rounded-full py-4 items-center active:opacity-80 ${canSubmit ? "bg-primary" : "bg-surface border border-border"
-                  }`}
+                style={({ pressed }) => [
+                  styles.ctaBtn,
+                  canSubmit ? styles.ctaBtnActive : styles.ctaBtnDisabled,
+                  pressed && canSubmit && { backgroundColor: Colors.emotionalPressed },
+                ]}
               >
-                <Text
-                  className={`font-semibold text-sm uppercase tracking-wider ${canSubmit ? "text-white" : "text-foreground-muted"
-                    }`}
-                >
+                <Text style={[styles.ctaBtnText, !canSubmit && styles.ctaBtnTextDisabled]}>
                   {isEditMode ? "Enregistrer les modifications" : "Ajouter l'exercice"}
                 </Text>
               </Pressable>
 
-              {/* Delete */}
               {isEditMode && onDelete && (
                 <Pressable
                   onPress={handleDelete}
-                  className="rounded-xl border-2 border-error/30 py-4 items-center active:bg-error/5"
+                  style={({ pressed }) => [styles.deleteBtn, pressed && { backgroundColor: Colors.error + "12" }]}
                 >
-                  <Text className="text-error font-medium text-sm uppercase tracking-wider">
-                    Supprimer cet exercice
-                  </Text>
+                  <Text style={styles.deleteBtnText}>Supprimer l'exercice</Text>
                 </Pressable>
               )}
             </View>
           </Animated.View>
+
         </View>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  // Sheet
+  sheet: {
+    backgroundColor: Colors.surfaceElevated,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: "92%",
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    alignSelf: "center",
+    marginTop: 12,
+    marginBottom: 24,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 4,
+  },
+
+  // Header
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: Colors.foreground,
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: Colors.foregroundMuted,
+    marginBottom: 28,
+  },
+
+  // Fields
+  fieldBlock: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.foregroundSubtle,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    marginBottom: 10,
+  },
+
+  // Text input (nom)
+  textInput: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.input,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: Colors.foreground,
+    minHeight: 50,
+  },
+
+  // Autocomplete
+  autocompleteBox: {
+    marginTop: 6,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.input,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: "hidden",
+  },
+  autocompleteItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  autocompleteItemBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  autocompleteItemName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.foreground,
+  },
+  autocompleteItemMeta: {
+    fontSize: 11,
+    color: Colors.foregroundMuted,
+    marginTop: 2,
+  },
+  sessionBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sessionBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.foregroundMuted,
+  },
+  autocompleteCreate: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+  },
+  createIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.accent + "20",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  autocompleteCreateText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.accent,
+  },
+
+  // Charge
+  chargeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    height: 54,
+  },
+  chargeBtn: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.input,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 16,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chargeBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.foregroundMuted,
+    letterSpacing: 0.2,
+  },
+  chargeValueBox: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.input,
+    borderWidth: 1,
+    borderColor: Colors.accent + "60",
+    height: "100%",
+    gap: 4,
+  },
+  chargeInput: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: Colors.foreground,
+    textAlign: "center",
+    minWidth: 60,
+    padding: 0,
+  },
+  chargeUnit: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: Colors.foregroundMuted,
+  },
+
+  // Stepper row group
+  rowGroup: {
+    flexDirection: "row",
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.input,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: "hidden",
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  rowDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.border,
+    alignSelf: "stretch",
+  },
+  stepperRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 44,
+    backgroundColor: "transparent",
+  },
+  stepperBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: Colors.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperBtnPressed: {
+    backgroundColor: Colors.border,
+  },
+  stepperBtnText: {
+    fontSize: 18,
+    fontWeight: "300",
+    color: Colors.foreground,
+    lineHeight: 20,
+  },
+  stepperValueArea: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  stepperInput: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: Colors.accent,
+    textAlign: "center",
+    minWidth: 36,
+    padding: 0,
+  },
+  stepperSuffix: {
+    fontSize: 12,
+    color: Colors.foregroundSubtle,
+  },
+
+  // RIR
+  rirRow: {
+    flexDirection: "row",
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.input,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 4,
+    gap: 4,
+  },
+  rirPill: {
+    flex: 1,
+    height: 38,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  rirPillActive: {
+    backgroundColor: Colors.accent,
+  },
+  rirPillText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.foregroundMuted,
+  },
+  rirPillTextActive: {
+    color: "#FFFFFF",
+  },
+
+  // Footer
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+    gap: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+  },
+  ctaBtn: {
+    borderRadius: BorderRadius.action,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  ctaBtnActive: {
+    backgroundColor: Colors.emotional,
+  },
+  ctaBtnDisabled: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  ctaBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  ctaBtnTextDisabled: {
+    color: Colors.foregroundSubtle,
+  },
+  deleteBtn: {
+    borderRadius: BorderRadius.input,
+    borderWidth: 1.5,
+    borderColor: Colors.error + "40",
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  deleteBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.error,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+});

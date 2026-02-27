@@ -24,7 +24,7 @@ export function calculateProgression(
   // P0-2: Check progression BEFORE stagnation
   if (progressionValidated) {
     const nextCharge = last.charge + 2.5;
-    const targetTotalReps = exercise.sets * exercise.repsMin;
+    const targetTotalReps = exercise.setsMin * exercise.repsMin;
     return {
       type: 'increase_charge',
       nextCharge,
