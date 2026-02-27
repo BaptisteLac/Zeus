@@ -20,10 +20,9 @@ import { Colors } from './colors';
  * Uses system mono fonts — no font loading required.
  * Paired with fontVariant: ['tabular-nums'] for fixed-width digit columns.
  */
-const FONT_MONO = Platform.select<string>({
+const FONT_MONO = Platform.select({
   ios: 'Menlo',
   android: 'monospace',
-  default: undefined,
 });
 
 // ─── Data Variants (numeric displays) ────────────────────────────────────────

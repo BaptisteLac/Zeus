@@ -20,12 +20,12 @@ import {
 } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { MMKV } from 'react-native-mmkv';
+import { createStorageInstance } from '@/lib/storageAdapter';
 import { useHaptics } from '@/hooks/useHaptics';
 
 // ─── MMKV — instance dédiée au timer ─────────────────────────────────────────
 
-const storage = new MMKV({ id: 'iron-timer' });
+const storage = createStorageInstance('iron-timer');
 const TIMER_KEY = 'active_timer';
 
 interface PersistedTimer {
@@ -39,7 +39,7 @@ function mmkvSave(data: PersistedTimer) {
   storage.set(TIMER_KEY, JSON.stringify(data));
 }
 function mmkvClear() {
-  storage.delete(TIMER_KEY);
+  storage.remove(TIMER_KEY);
 }
 function mmkvLoad(): TimerState | null {
   try {
@@ -94,8 +94,8 @@ const INACTIVE: TimerState = {
 
 const TimerContext = createContext<TimerContextValue>({
   ...INACTIVE,
-  startTimer: () => {},
-  stopTimer: () => {},
+  startTimer: () => { },
+  stopTimer: () => { },
 });
 
 export function useTimer(): TimerContextValue {
@@ -125,6 +125,8 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
       }),
     });
   }, []);
@@ -135,7 +137,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     if (!notifIdRef.current) return;
     try {
       await Notifications.cancelScheduledNotificationAsync(notifIdRef.current);
-    } catch {}
+    } catch { }
     notifIdRef.current = null;
   };
 

@@ -1,11 +1,10 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
   Pressable,
   TextInput,
   Alert,
-  ScrollView,
 } from "react-native";
 import Animated, {
   useSharedValue,
@@ -13,6 +12,7 @@ import Animated, {
   withTiming,
   withSpring,
   withSequence,
+  interpolate,
 } from "react-native-reanimated";
 import { Exercise, WorkoutEntry, ExerciseInput } from "@/lib/types";
 import { calculateProgression } from "@/lib/progression";
@@ -25,7 +25,6 @@ import { PRBadge, PRGlow } from "@/components/ui/PRBadge";
 import { SwipeableSerieRow } from "@/components/SwipeableSerieRow";
 
 // ─── SetCheckmark ────────────────────────────────────────────────────────────
-// Mounts when a set transitions to "done" — triggers scale-in animation once.
 function SetCheckmark() {
   const scale = useSharedValue(0);
   useEffect(() => {
@@ -38,11 +37,95 @@ function SetCheckmark() {
     transform: [{ scale: scale.value }],
   }));
   return (
-    <Animated.Text style={[animStyle, { fontSize: 10, color: Colors.emotional }]}>
+    <Animated.Text style={[animStyle, { fontSize: 14, color: Colors.emotional }]}>
       ✓
     </Animated.Text>
   );
 }
+
+// ─── StatusDot ───────────────────────────────────────────────────────────────
+// Petit indicateur coloré dans le header représentant l'état de la card
+interface StatusDotProps {
+  isPR: boolean;
+  saved: boolean;
+  isExpanded: boolean;
+}
+
+function StatusDot({ isPR, saved, isExpanded }: StatusDotProps) {
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    if (isExpanded && !saved) {
+      // Pulse doux en état actif
+      pulse.value = withSequence(
+        withTiming(1.4, { duration: 600 }),
+        withTiming(1, { duration: 600 }),
+      );
+    } else {
+      pulse.value = withTiming(1, { duration: 200 });
+    }
+  }, [isExpanded, saved]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+  }));
+
+  const color = isPR
+    ? Colors.achievement
+    : saved
+      ? Colors.emotional
+      : isExpanded
+        ? Colors.accent
+        : Colors.foregroundSubtle;
+
+  return (
+    <Animated.View
+      style={[
+        animStyle,
+        {
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: color,
+        },
+      ]}
+    />
+  );
+}
+
+// ─── AnimatedChevron ─────────────────────────────────────────────────────────
+function AnimatedChevron({ isExpanded }: { isExpanded: boolean }) {
+  const rotation = useSharedValue(isExpanded ? 1 : 0);
+
+  useEffect(() => {
+    rotation.value = withTiming(isExpanded ? 1 : 0, { duration: 250 });
+  }, [isExpanded]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        rotate: `${interpolate(rotation.value, [0, 1], [0, 180])}deg`,
+      },
+    ],
+  }));
+
+  return (
+    <Animated.Text
+      style={[
+        animStyle,
+        {
+          fontSize: 12,
+          color: isExpanded ? Colors.accent : Colors.foregroundSubtle,
+          lineHeight: 16,
+        },
+      ]}
+    >
+      ▾
+    </Animated.Text>
+  );
+}
+
+// ─── Props ───────────────────────────────────────────────────────────────────
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -56,6 +139,124 @@ interface ExerciseCardProps {
   isExpanded?: boolean;
   onToggle?: () => void;
 }
+
+// ─── SerieRow ────────────────────────────────────────────────────────────────
+// Ligne horizontale remplaçant les chips carrées
+interface SerieRowProps {
+  index: number;
+  value: number;
+  state: "active" | "done" | "pending";
+  onChangeText: (val: string) => void;
+  onFocus: () => void;
+  onValidate: () => void;
+  onDelete: () => void;
+  onUnvalidate: () => void;
+}
+
+function SerieRow({ index, value, state, onChangeText, onFocus, onValidate, onDelete, onUnvalidate }: SerieRowProps) {
+  const labelColor =
+    state === "active"
+      ? Colors.accent
+      : state === "done"
+        ? Colors.emotional
+        : Colors.foregroundSubtle;
+
+  const inputColor =
+    state === "active"
+      ? Colors.foreground
+      : state === "done"
+        ? Colors.emotional
+        : Colors.foregroundMuted;
+
+  return (
+    <SwipeableSerieRow
+      onComplete={onValidate}
+      onDelete={onDelete}
+      disabled={false}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: state === "active" ? Colors.surfaceElevated : "transparent",
+          borderRadius: 12,
+          marginBottom: 2,
+          paddingHorizontal: 12,
+          paddingVertical: 2,
+          borderWidth: 1,
+          borderColor:
+            state === "active"
+              ? Colors.accent + "40"
+              : state === "done"
+                ? Colors.emotional + "25"
+                : "transparent",
+        }}
+      >
+        {/* Label S1 / S2 / S3 */}
+        <View style={{ width: 36 }}>
+          {state === "done" ? (
+            <SetCheckmark />
+          ) : (
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: "700",
+                color: labelColor,
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}
+            >
+              {`S${index + 1}`}
+            </Text>
+          )}
+        </View>
+
+        {/* Input reps — largeur fixe, centré */}
+        <View style={{ flex: 1 }}>
+          <TextInput
+            value={value > 0 ? String(value) : ""}
+            onChangeText={onChangeText}
+            onFocus={() => {
+              if (state === "done") onUnvalidate();
+              onFocus();
+            }}
+            keyboardType="numeric"
+            placeholder="—"
+            placeholderTextColor={Colors.foregroundSubtle}
+            style={{
+              textAlign: "center",
+              fontSize: 22,
+              fontWeight: "700",
+              color: inputColor,
+              fontVariant: ["tabular-nums"],
+              paddingVertical: 14,
+              paddingHorizontal: 8,
+            }}
+          />
+        </View>
+
+        {/* Hint swipe ou unité reps */}
+        <View style={{ width: 48, alignItems: "flex-end" }}>
+          {state === "done" ? (
+            <Text style={{ fontSize: 11, color: Colors.success + "CC", fontWeight: "600" }}>
+              {value} reps
+            </Text>
+          ) : state === "active" ? (
+            <Text style={{ fontSize: 9, color: Colors.foregroundSubtle, letterSpacing: 0.3, textAlign: "right" }}>
+              {"← valider"}
+            </Text>
+          ) : (
+            <Text style={{ fontSize: 11, color: Colors.foregroundSubtle, fontWeight: "400" }}>
+              reps
+            </Text>
+          )}
+        </View>
+      </View>
+    </SwipeableSerieRow>
+  );
+}
+
+// ─── ExerciseCard ─────────────────────────────────────────────────────────────
 
 export default function ExerciseCard({
   exercise,
@@ -99,12 +300,11 @@ export default function ExerciseCard({
   );
   const [showOptions, setShowOptions] = useState(false);
 
-  // Expand/collapse animation
-  const expandAnim = useSharedValue(isExpanded ? 1 : 0);
-
-  useEffect(() => {
-    expandAnim.value = withTiming(isExpanded ? 1 : 0, { duration: 280 });
-  }, [isExpanded]);
+  // Button press scale animation
+  const btnScale = useSharedValue(1);
+  const btnAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: btnScale.value }],
+  }));
 
   // Resync sets when exercise definition changes
   useEffect(() => {
@@ -134,7 +334,7 @@ export default function ExerciseCard({
 
   const totalReps = sets.reduce((a, b) => a + b, 0);
   const filledSetsCount = sets.filter((s) => s > 0).length;
-  const allSetsFilled = filledSetsCount === exercise.sets;
+  const allSetsFilled = filledSetsCount === sets.length;
   const canSave = charge > 0 && sets.some((s) => s > 0);
 
   const handleSetChange = (i: number, val: string) => {
@@ -147,7 +347,7 @@ export default function ExerciseCard({
   };
 
   const findNextUncompletedSet = (afterIndex: number): number | null => {
-    for (let i = afterIndex + 1; i < exercise.sets; i++) {
+    for (let i = afterIndex + 1; i < sets.length; i++) {
       if (!completedSets.has(i)) return i;
     }
     return null;
@@ -165,8 +365,45 @@ export default function ExerciseCard({
     onStartTimer?.(exercise.rest);
   };
 
+  const handleDeleteSet = (setIndex: number) => {
+    if (sets.length <= 1) return; // Garder au moins 1 série
+    setSets((prev) => prev.filter((_, i) => i !== setIndex));
+    setCompletedSets((prev) => {
+      const next = new Set<number>();
+      for (const idx of prev) {
+        if (idx < setIndex) next.add(idx);
+        else if (idx > setIndex) next.add(idx - 1);
+      }
+      return next;
+    });
+    setActiveSetIndex((prev) => Math.max(0, prev > setIndex ? prev - 1 : prev));
+    haptics.light();
+  };
+
+  const handleUnvalidateSet = (setIndex: number) => {
+    setCompletedSets((prev) => {
+      const next = new Set(prev);
+      next.delete(setIndex);
+      return next;
+    });
+    setActiveSetIndex(setIndex);
+    haptics.light();
+  };
+
+  const handleAddSet = () => {
+    setSets((prev) => [...prev, 0]);
+    setActiveSetIndex(sets.length); // Focus sur la nouvelle série
+    haptics.light();
+  };
+
   const handleMainAction = () => {
     if (!canSave) return;
+
+    // Animate button
+    btnScale.value = withSequence(
+      withTiming(0.96, { duration: 80 }),
+      withSpring(1, { damping: 12, stiffness: 300 }),
+    );
 
     if (saved && modified) {
       const input = { charge, sets, rir };
@@ -188,7 +425,7 @@ export default function ExerciseCard({
 
     const currentSetHasReps = sets[activeSetIndex] > 0;
     const isLastSet =
-      completedSets.size === exercise.sets - 1 && currentSetHasReps;
+      completedSets.size === sets.length - 1 && currentSetHasReps;
 
     if (isLastSet || (allSetsFilled && completedSets.size > 0)) {
       handleValidateSet(activeSetIndex);
@@ -207,47 +444,46 @@ export default function ExerciseCard({
 
   const getButtonConfig = () => {
     if (saved && !modified) {
-      return { label: "Enregistré ✓", variant: "emotional", disabled: false };
+      return { label: "Enregistré", icon: "✓", variant: "emotional", disabled: false };
     }
     if (saved && modified) {
-      return { label: "Modifier", variant: "accent", disabled: false };
+      return { label: "Modifier", icon: "✎", variant: "accent", disabled: false };
     }
     if (!canSave) {
-      return { label: "Enregistrer", variant: "disabled", disabled: true };
+      return { label: "Enregistrer", icon: null, variant: "disabled", disabled: true };
     }
     if (allSetsFilled && completedSets.size === 0) {
-      return { label: "Enregistrer l'exercice", variant: "emotional", disabled: false };
+      return { label: "Enregistrer l'exercice", icon: "✓", variant: "emotional", disabled: false };
     }
-    const remaining = exercise.sets - completedSets.size;
+    const remaining = sets.length - completedSets.size;
     if (remaining === 1 && sets[activeSetIndex] > 0) {
-      return { label: "Terminer l'exercice ✓", variant: "emotional", disabled: false };
+      return { label: "Terminer l'exercice", icon: "✓", variant: "emotional", disabled: false };
     }
     if (sets[activeSetIndex] > 0) {
       return {
-        label: `Valider S${activeSetIndex + 1} & Repos ⏱`,
+        label: `Valider S${activeSetIndex + 1} & repos`,
+        icon: "⏱",
         variant: "accent",
         disabled: false,
       };
     }
     return {
-      label: `Remplir S${activeSetIndex + 1}`,
+      label: `Renseigner S${activeSetIndex + 1}`,
+      icon: null,
       variant: "disabled",
       disabled: true,
     };
   };
 
   const getChipState = (i: number): "active" | "done" | "pending" => {
-    if (completedSets.has(i) && i !== activeSetIndex) return "done";
+    if (completedSets.has(i)) return "done";
     if (i === activeSetIndex) return "active";
     return "pending";
   };
 
   const buttonConfig = getButtonConfig();
 
-  // ─── PR Detection ───────────────────────────────────────────────────────────
-  // "prior" = all entries except the most recent (which is the current session
-  // after save). If history doesn't yet include the current save, all entries
-  // are prior — either way charge > maxPriorCharge signals a new record.
+  // ─── PR Detection ─────────────────────────────────────────────────────────
   const priorEntries = history.slice(0, history.length > 0 ? -1 : 0);
   const maxPriorCharge =
     priorEntries.length > 0
@@ -270,44 +506,40 @@ export default function ExerciseCard({
     );
   };
 
-  // Card border color — 4 états visuels (spec Phase 4)
-  const cardBorderClass = isPR
-    ? "border-achievement"         // PR détecté : bordure achievement
+  // ─── Card border ──────────────────────────────────────────────────────────
+  const cardBorderColor = isPR
+    ? Colors.achievement + "60"
     : saved
-    ? "border-border"              // Terminée : bordure neutre (glow assure la distinction)
-    : isExpanded
-    ? "border-accent/30"           // En cours : bordure accent
-    : "border-border";             // À faire : bordure neutre
-
-  // Status badge
-  const statusLabel = saved ? "VALIDÉ" : isExpanded ? "EN COURS" : "EN ATTENTE";
-  const statusClass = saved
-    ? "bg-emotional/10 border-emotional/20"
-    : isExpanded
-      ? "bg-accent/10 border-accent/20"
-      : "bg-surface border-border";
-  const statusTextClass = saved
-    ? "text-emotional"
-    : isExpanded
-      ? "text-accent"
-      : "text-foreground-muted";
+      ? Colors.emotional + "30"
+      : isExpanded
+        ? Colors.accent + "35"
+        : Colors.border;
 
   return (
     <>
       <View
-        className={`relative rounded-card border overflow-hidden bg-surface ${cardBorderClass}`}
+        style={{
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: cardBorderColor,
+          backgroundColor: Colors.surface,
+          overflow: "hidden",
+        }}
       >
-        {/* Terminée — glow emotional 8% (statique) */}
+        {/* Saved glow */}
         {saved && !isPR && (
           <View
             pointerEvents="none"
-            className="absolute inset-0 bg-emotional/8"
+            style={{
+              position: "absolute",
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: Colors.emotional + "0D",
+            }}
           />
         )}
-        {/* PR — glow achievement 6% (animé via PRGlow, disparaît après 3s) */}
         <PRGlow visible={isPR} />
 
-        {/* Header — tap to toggle, long-press to edit */}
+        {/* ── Header ──────────────────────────────────────────────────── */}
         <Pressable
           onPress={() => onToggle?.()}
           onLongPress={() => {
@@ -315,248 +547,275 @@ export default function ExerciseCard({
             onEditDefinition?.();
           }}
           delayLongPress={500}
-          className="px-4 pt-4 pb-3"
+          style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 }}
         >
-          <View className="flex-row items-start justify-between">
-            <View className="flex-1 pr-3">
+          {/* Ligne 1 : Nom + Options + Chevron */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 8 }}>
+              <StatusDot isPR={isPR} saved={saved} isExpanded={isExpanded} />
               <Text
-                className={`text-base font-semibold uppercase tracking-wide leading-tight ${isExpanded ? "text-accent" : "text-foreground"
-                  }`}
+                numberOfLines={1}
+                style={{
+                  flex: 1,
+                  fontSize: 16,
+                  fontWeight: "700",
+                  color: isExpanded ? Colors.accent : Colors.foreground,
+                  letterSpacing: -0.2,
+                }}
               >
                 {exercise.name}
               </Text>
-              {isExpanded && (
-                <Text className="text-foreground-muted text-xs mt-1">
-                  {exercise.repsMin}–{exercise.repsMax} reps · RIR {exercise.rir}
-                </Text>
-              )}
-              {/* Badge PR — géré par PRBadge (Phase 7) */}
-              {isPR && (
-                <View className="mt-2">
-                  <PRBadge visible={isPR} value={`${charge} kg`} />
-                </View>
-              )}
             </View>
 
-            <View className="flex-row items-center gap-2">
-              {/* Options button (only expanded) */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               {isExpanded && (
                 <Pressable
                   onPress={() => setShowOptions(true)}
-                  hitSlop={8}
-                  className="w-8 h-8 items-center justify-center rounded-full active:bg-white/5"
+                  hitSlop={10}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 15,
+                  }}
                 >
-                  <Text className="text-foreground-muted text-lg leading-none">⋯</Text>
+                  <Text style={{ color: Colors.foregroundMuted, fontSize: 18, lineHeight: 20 }}>
+                    ⋯
+                  </Text>
                 </Pressable>
               )}
-
-              {/* Chevron */}
-              <Text
-                className={`text-lg ${isExpanded ? "text-accent" : "text-foreground-subtle"
-                  }`}
-              >
-                {isExpanded ? "⌃" : "⌄"}
-              </Text>
+              <AnimatedChevron isExpanded={isExpanded} />
             </View>
           </View>
 
-          {/* Status + last entry row */}
-          <View className="flex-row items-center justify-between mt-2">
-            <View
-              className={`px-2.5 py-0.5 rounded-full border ${statusClass}`}
-            >
-              <Text className={`text-[11px] font-semibold ${statusTextClass}`}>
-                {statusLabel}
-              </Text>
-            </View>
+          {/* Ligne 2 : Sous-titre contextuel */}
+          <View style={{ marginTop: 6, marginLeft: 16 }}>
+            {/* État collapsed — résumé de l'exercice */}
+            {!isExpanded && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Text style={{ fontSize: 13, color: Colors.foregroundMuted }}>
+                  {exercise.sets} × {exercise.repsMin}–{exercise.repsMax} reps
+                </Text>
+                {lastEntry && (
+                  <Text style={{
+                    fontSize: 12,
+                    color: Colors.foregroundSubtle,
+                    fontVariant: ["tabular-nums"],
+                  }}>
+                    · S-1 : {lastEntry.charge} kg · {lastEntry.sets.join("-")}
+                  </Text>
+                )}
+              </View>
+            )}
 
-            {!isExpanded && lastEntry && (
-              <Text className="text-foreground-subtle text-xs font-mono">
-                {lastEntry.charge} kg · {lastEntry.sets.join("-")} · RIR {lastEntry.rir}
+            {/* État expanded — cible de reps + RIR objectif */}
+            {isExpanded && (
+              <Text style={{ fontSize: 12, color: Colors.foregroundMuted }}>
+                {exercise.repsMin}–{exercise.repsMax} reps · RIR cible {exercise.rir}
               </Text>
             )}
           </View>
 
-          {/* Collapsed summary */}
-          {!isExpanded && !saved && (
-            <View className="flex-row gap-2 mt-2">
-              <View className="bg-surface/60 rounded-md px-2 py-0.5">
-                <Text className="text-foreground-muted text-xs font-mono">
-                  {exercise.sets} séries
-                </Text>
-              </View>
-              <View className="bg-surface/60 rounded-md px-2 py-0.5">
-                <Text className="text-foreground-muted text-xs font-mono">
-                  {exercise.repsMin}-{exercise.repsMax} reps
-                </Text>
-              </View>
+          {/* Badge PR */}
+          {isPR && (
+            <View style={{ marginTop: 8, marginLeft: 16 }}>
+              <PRBadge visible={isPR} value={`${charge} kg`} />
             </View>
           )}
         </Pressable>
 
-        {/* Expanded content */}
+        {/* ── Contenu expanded ────────────────────────────────────────── */}
         {isExpanded && (
-          <View className="px-4 pb-4 gap-4">
-            {/* 3 dernières séances */}
-            {history.length > 0 && (
-              <View className="gap-0.5">
-                {history
-                  .slice(-3)
-                  .reverse()
-                  .map((entry, idx) => (
-                    <View key={idx} className="flex-row justify-end items-center gap-1.5">
-                      <Text className="text-foreground-subtle text-[10px] font-mono">
-                        {idx === 0 ? "S-1" : idx === 1 ? "S-2" : "S-3"}
-                      </Text>
-                      <Text className="text-foreground-muted text-xs font-mono">
-                        {entry.charge} kg · {entry.sets.join("-")} · RIR {entry.rir}
-                      </Text>
-                    </View>
-                  ))}
-              </View>
-            )}
+          <View style={{ paddingHorizontal: 16, paddingBottom: 20, gap: 20 }}>
 
             {/* Progression banner */}
             {progression && (
-              <View className="flex-row items-start gap-3 bg-achievement/10 border-l-4 border-achievement px-4 py-3 rounded-r-xl">
-                <Text className="text-lg">
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 12,
+                  backgroundColor: Colors.achievement + "12",
+                  borderLeftWidth: 3,
+                  borderLeftColor: Colors.achievement,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                }}
+              >
+                <Text style={{ fontSize: 16 }}>
                   {progression.type === "increase_charge"
                     ? "🏆"
                     : progression.type === "stagnation"
                       ? "⚡"
                       : "📈"}
                 </Text>
-                <View className="flex-1">
-                  <Text className="text-achievement font-medium text-sm">
-                    Objectif : {progression.nextCharge} kg
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: Colors.achievement, fontWeight: "600", fontSize: 13 }}>
+                    Objectif · {progression.nextCharge} kg
                   </Text>
-                  <Text className="text-foreground-muted text-xs mt-0.5">
-                    Battre {progression.targetTotalReps} reps au total
+                  <Text style={{ color: Colors.foregroundMuted, fontSize: 11, marginTop: 1 }}>
+                    Vise {progression.targetTotalReps} reps au total
                   </Text>
                 </View>
               </View>
             )}
 
-            {/* Charge + RIR */}
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <ChargeStepper
-                  value={charge}
-                  onChange={setCharge}
-                  step={2.5}
-                />
-              </View>
-              <View className="flex-1">
-                <RIRSelector value={rir} onChange={setRir} />
-              </View>
+            {/* Charge */}
+            <View style={{ gap: 6 }}>
+              <Text style={{
+                fontSize: 10,
+                fontWeight: "700",
+                color: Colors.foregroundSubtle,
+                letterSpacing: 1.5,
+                textTransform: "uppercase",
+              }}>
+                Charge
+              </Text>
+              <ChargeStepper value={charge} onChange={setCharge} step={2.5} />
             </View>
 
-            {/* Set chips — chaque série swipeable via SwipeableSerieRow */}
-            <View>
-              <View className="flex-row items-baseline justify-between mb-3">
-                <Text className="text-foreground-muted text-xs uppercase tracking-wider">
+            {/* Séries — Set Rows horizontaux */}
+            <View style={{ gap: 4 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <Text style={{
+                  fontSize: 10,
+                  fontWeight: "700",
+                  color: Colors.foregroundSubtle,
+                  letterSpacing: 1.5,
+                  textTransform: "uppercase",
+                }}>
                   Séries
                 </Text>
-                <Text className="text-foreground-muted text-xs">
-                  Total :{" "}
-                  <Text className="text-accent font-mono">{totalReps}</Text>
+                <Text style={{ fontSize: 11, color: Colors.foregroundSubtle, fontVariant: ["tabular-nums"] }}>
+                  {completedSets.size}/{sets.length} · {totalReps} reps
                 </Text>
               </View>
 
-              <View className="flex-row flex-wrap gap-2">
-                {sets.map((val, i) => {
-                  const state = getChipState(i);
-                  const chipBg =
-                    state === "active"
-                      ? "border-accent bg-surface"
-                      : state === "done"
-                        ? "border-emotional/40 bg-emotional/10"
-                        : "border-transparent bg-surface";
-                  const textColor =
-                    state === "active"
-                      ? "text-accent"
-                      : state === "done"
-                        ? "text-emotional"
-                        : "text-foreground-muted";
+              {sets.map((val, i) => {
+                const state = getChipState(i);
+                return (
+                  <SerieRow
+                    key={i}
+                    index={i}
+                    value={val}
+                    state={state}
+                    onChangeText={(t) => handleSetChange(i, t)}
+                    onFocus={() => setActiveSetIndex(i)}
+                    onValidate={() => handleValidateSet(i)}
+                    onDelete={() => handleDeleteSet(i)}
+                    onUnvalidate={() => handleUnvalidateSet(i)}
+                  />
+                );
+              })}
 
-                  return (
-                    <View key={i} style={{ minWidth: 64, flex: 1 }}>
-                      <SwipeableSerieRow
-                        onComplete={() => handleValidateSet(i)}
-                        disabled={completedSets.has(i)}
-                      >
-                        <View className="flex-col items-center gap-1.5">
-                          {state === "done" ? (
-                            <SetCheckmark />
-                          ) : (
-                            <Text
-                              className={`text-[10px] uppercase tracking-widest ${
-                                state === "active"
-                                  ? "text-accent font-semibold"
-                                  : "text-foreground-muted"
-                              }`}
-                            >
-                              {`S${i + 1}`}
-                            </Text>
-                          )}
-                          <Pressable
-                            className={`w-full rounded-xl border ${chipBg}`}
-                            onPress={() => setActiveSetIndex(i)}
-                          >
-                            <TextInput
-                              value={val > 0 ? String(val) : ""}
-                              onChangeText={(t) => handleSetChange(i, t)}
-                              onFocus={() => setActiveSetIndex(i)}
-                              keyboardType="numeric"
-                              placeholder="—"
-                              placeholderTextColor={Colors.foregroundSubtle}
-                              className={`text-center text-lg font-mono py-3 px-1 ${textColor}`}
-                              style={{ minHeight: 48 }}
-                            />
-                          </Pressable>
-                        </View>
-                      </SwipeableSerieRow>
-                    </View>
-                  );
-                })}
-              </View>
-
-              {/* Progress bar */}
-              <View className="flex-row items-center gap-3 mt-4">
-                <View className="flex-1 h-1.5 rounded-full bg-surface overflow-hidden">
+              {/* Barre de progression */}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 }}>
+                <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: Colors.surfaceElevated, overflow: "hidden" }}>
                   <View
-                    className="h-full rounded-full bg-emotional"
                     style={{
-                      width: `${(completedSets.size / exercise.sets) * 100}%`,
+                      height: "100%",
+                      borderRadius: 2,
+                      backgroundColor: completedSets.size === sets.length ? Colors.emotional : Colors.accent,
+                      width: `${sets.length > 0 ? (completedSets.size / sets.length) * 100 : 0}%`,
                     }}
                   />
                 </View>
-                <Text className="text-foreground-muted text-[11px] font-mono">
-                  {completedSets.size}/{exercise.sets}
+                <Text style={{ fontSize: 10, color: Colors.foregroundSubtle, fontVariant: ["tabular-nums"] }}>
+                  {Math.round(sets.length > 0 ? (completedSets.size / sets.length) * 100 : 0)}%
                 </Text>
               </View>
+
+              {/* Bouton Ajouter une série */}
+              {!saved && (
+                <Pressable
+                  onPress={handleAddSet}
+                  style={({ pressed }) => ({
+                    marginTop: 8,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderStyle: "dashed",
+                    borderColor: pressed ? Colors.accent : Colors.border,
+                    backgroundColor: pressed ? Colors.accent + "10" : "transparent",
+                    paddingVertical: 12,
+                    alignItems: "center",
+                  })}
+                >
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: "600",
+                      color: Colors.foregroundMuted,
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    + Ajouter une série
+                  </Text>
+                </Pressable>
+              )}
             </View>
 
-            {/* Main action button */}
-            <Pressable
-              onPress={handleMainAction}
-              disabled={buttonConfig.disabled}
-              className={`w-full rounded-full py-4 items-center mt-2 active:opacity-80 ${buttonConfig.variant === "emotional"
-                ? "bg-emotional"
-                : buttonConfig.variant === "accent"
-                  ? "bg-accent"
-                  : "bg-surface border border-border"
-                }`}
-            >
-              <Text
-                className={`font-semibold text-sm uppercase tracking-wider ${buttonConfig.variant === "disabled"
-                  ? "text-foreground-muted"
-                  : "text-white"
-                  }`}
-              >
-                {buttonConfig.label}
+            {/* RIR */}
+            <View style={{ gap: 6 }}>
+              <Text style={{
+                fontSize: 10,
+                fontWeight: "700",
+                color: Colors.foregroundSubtle,
+                letterSpacing: 1.5,
+                textTransform: "uppercase",
+              }}>
+                Ressenti (RIR)
               </Text>
-            </Pressable>
+              <RIRSelector value={rir} onChange={setRir} />
+            </View>
+
+            {/* Bouton CTA principal */}
+            <Animated.View style={btnAnimStyle}>
+              <Pressable
+                onPress={handleMainAction}
+                disabled={buttonConfig.disabled}
+                style={{
+                  width: "100%",
+                  borderRadius: 14,
+                  paddingVertical: 18,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "row",
+                  gap: 8,
+                  backgroundColor:
+                    buttonConfig.variant === "emotional"
+                      ? Colors.emotional
+                      : buttonConfig.variant === "accent"
+                        ? Colors.accent
+                        : Colors.surfaceElevated,
+                  borderWidth: buttonConfig.variant === "disabled" ? 1 : 0,
+                  borderColor: Colors.border,
+                  opacity: buttonConfig.disabled ? 0.5 : 1,
+                }}
+              >
+                {buttonConfig.icon && (
+                  <Text style={{
+                    fontSize: 16,
+                    color: buttonConfig.variant === "disabled" ? Colors.foregroundMuted : "#FFFFFF",
+                  }}>
+                    {buttonConfig.icon}
+                  </Text>
+                )}
+                <Text
+                  style={{
+                    fontWeight: "700",
+                    fontSize: 15,
+                    color: buttonConfig.variant === "disabled"
+                      ? Colors.foregroundMuted
+                      : "#FFFFFF",
+                    letterSpacing: 0.2,
+                  }}
+                >
+                  {buttonConfig.label}
+                </Text>
+              </Pressable>
+            </Animated.View>
           </View>
         )}
       </View>

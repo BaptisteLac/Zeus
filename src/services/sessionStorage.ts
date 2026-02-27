@@ -19,12 +19,12 @@
  *   pas un crash récent → ignoré silencieusement.
  */
 
-import { MMKV } from 'react-native-mmkv';
+import { createStorageInstance } from '@/lib/storageAdapter';
 import { AppState, ExerciseInput, SessionType } from '@/lib/types';
 
 // ─── MMKV instance ────────────────────────────────────────────────────────────
 
-const storage = new MMKV({ id: 'iron-session' });
+const storage = createStorageInstance('iron-session');
 const SESSION_KEY = 'active_session';
 
 /** Durée maximale de validité d'un snapshot (24h en ms) */
@@ -70,7 +70,7 @@ export function loadActiveSession(): ActiveSessionSnapshot | null {
     return JSON.parse(raw) as ActiveSessionSnapshot;
   } catch {
     // Données corrompues → nettoyage silencieux
-    storage.delete(SESSION_KEY);
+    storage.remove(SESSION_KEY);
     return null;
   }
 }
@@ -80,7 +80,7 @@ export function loadActiveSession(): ActiveSessionSnapshot | null {
  * À appeler en fin de séance (terminée) ou sur abandon explicite.
  */
 export function clearActiveSession(): void {
-  storage.delete(SESSION_KEY);
+  storage.remove(SESSION_KEY);
 }
 
 /**

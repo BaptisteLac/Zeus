@@ -1,29 +1,21 @@
 /**
- * SwipeableSerieRow — Swipe vers la droite pour valider une série
- * Phase 8: Gestures & Swipe-to-Done
+ * SwipeableSerieRow — Swipe bidirectionnel sur une série
  *
- * Fonctionne entièrement sur le UI thread — zéro passage par le thread JS
- * pendant le geste (react-native-gesture-handler + reanimated worklets).
+ * ← Swipe GAUCHE → DROITE : suppression (fond error rouge)
+ * ← Swipe DROITE → GAUCHE : validation (fond success vert)
  *
  * Structure visuelle :
- *   ┌─────────────────────────────────────────────┐
- *   │ [fond emotional + ✓]  ← révélé par le swipe│
- *   │ ┌─────────────────────────────────────────┐ │
- *   │ │         foreground ({children})         │ │ ← se translate →
- *   │ └─────────────────────────────────────────┘ │
- *   └─────────────────────────────────────────────┘
+ *   ┌──────────────────────────────────────────────────────┐
+ *   │ [rouge 🗑]  ← révélé à gauche par swipe G→D         │
+ *   │                                                       │
+ *   │                                ← révélé à droite [✓ vert]│
+ *   │ ┌─────────────────────────────────────────────────┐  │
+ *   │ │           foreground ({children})               │  │ ← se translate
+ *   │ └─────────────────────────────────────────────────┘  │
+ *   └──────────────────────────────────────────────────────┘
  *
- * Seuil : 40% de la largeur du composant.
- * En dessous → retour élastique. Au-dessus → onComplete() + haptique Medium.
- *
- * Compatibilité ScrollView :
- *   activeOffsetX([10, Infinity]) → s'active uniquement sur swipe droite > 10px
- *   failOffsetY([-15, 15])        → échoue si vertical > 15px (laisse le scroll)
- *
- * Usage :
- *   <SwipeableSerieRow onComplete={() => validateSet(i)} disabled={isDone}>
- *     <SerieChip ... />
- *   </SwipeableSerieRow>
+ * Seuil : 38% de la largeur pour valider / supprimer.
+ * Compatibilité ScrollView : activeOffsetX([-10, 10]) ±, failOffsetY([-15, 15])
  */
 
 import React, { useCallback } from 'react';
@@ -44,23 +36,20 @@ import { Colors } from '@/theme/colors';
 
 interface SwipeableSerieRowProps {
   children: React.ReactNode;
-  /** Appelé quand le seuil de 40% est atteint — parent met à jour isDone */
+  /** Swipe droite→gauche : valider la série */
   onComplete: () => void;
-  /** Désactive le geste (série déjà validée, chargement…) */
+  /** Swipe gauche→droite : supprimer la série — si absent, action désactivée */
+  onDelete?: () => void;
+  /** Désactive les gestes (série déjà validée) */
   disabled?: boolean;
-  /** Style du conteneur principal */
   style?: ViewStyle;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-/** Seuil minimum de déplacement horizontal (px) pour activer le gesture */
-const ACTIVATION_THRESHOLD_PX = 10;
-/** Déplacement vertical max (px) avant que le gesture échoue (laisse le scroll) */
-const VERTICAL_FAIL_THRESHOLD_PX = 15;
-/** Fraction de la largeur à atteindre pour valider */
-const COMPLETE_RATIO = 0.4;
-
+const ACTIVATE_X = 10;
+const FAIL_Y = 15;
+const COMPLETE_RATIO = 0.38;
 const SPRING_RETURN = { damping: 22, stiffness: 320 } as const;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -68,144 +57,177 @@ const SPRING_RETURN = { damping: 22, stiffness: 320 } as const;
 export function SwipeableSerieRow({
   children,
   onComplete,
+  onDelete,
   disabled = false,
   style,
 }: SwipeableSerieRowProps) {
   const haptics = useHaptics();
 
-  // Largeur du composant mesurée via onLayout (JS) → shared value (UI thread)
   const rowWidth = useSharedValue(0);
-  // Translation courante du foreground
   const translateX = useSharedValue(0);
-  // Scale de la coche pour l'animation de complétion
   const checkScale = useSharedValue(1);
+  const trashScale = useSharedValue(1);
 
-  // ─── Callback JS — appelé depuis le UI thread via runOnJS ─────────────────
   const triggerComplete = useCallback(() => {
     haptics.medium();
     onComplete();
   }, [haptics, onComplete]);
 
-  // ─── Gesture Pan ──────────────────────────────────────────────────────────
+  const triggerDelete = useCallback(() => {
+    haptics.heavy();
+    onDelete?.();
+  }, [haptics, onDelete]);
+
   const pan = Gesture.Pan()
     .enabled(!disabled)
-    // S'active uniquement sur swipe droite (> ACTIVATION_THRESHOLD_PX en X)
-    .activeOffsetX([ACTIVATION_THRESHOLD_PX, Infinity])
-    // Échoue si mouvement vertical > seuil → laisse ScrollView gérer
-    .failOffsetY([-VERTICAL_FAIL_THRESHOLD_PX, VERTICAL_FAIL_THRESHOLD_PX])
+    .activeOffsetX([-ACTIVATE_X, ACTIVATE_X])
+    .failOffsetY([-FAIL_Y, FAIL_Y])
     .onUpdate((e) => {
       'worklet';
-      // Restreint au sens droit — ignore le swipe gauche
-      translateX.value = Math.max(0, e.translationX);
+      translateX.value = e.translationX;
     })
     .onEnd(() => {
       'worklet';
       const threshold = rowWidth.value * COMPLETE_RATIO;
 
-      if (translateX.value >= threshold) {
-        // ── Seuil atteint : animation de complétion ──────────────────────
-
-        // Coche : scale-in (0.8→1.5→1) pendant le retour du foreground
+      if (translateX.value <= -threshold) {
+        // ── Swipe droite→gauche : VALIDER ────────────────────────────
         checkScale.value = withSequence(
           withTiming(1.5, { duration: 150 }),
           withSpring(1, { damping: 10, stiffness: 200 }),
         );
-
-        // Foreground : retour élastique rapide
         translateX.value = withSpring(0, { damping: 25, stiffness: 250 });
-
-        // Callback JS : haptique + mise à jour parent
         runOnJS(triggerComplete)();
+      } else if (translateX.value >= threshold && onDelete) {
+        // ── Swipe gauche→droite : SUPPRIMER ──────────────────────────
+        trashScale.value = withSequence(
+          withTiming(1.4, { duration: 120 }),
+          withSpring(1, { damping: 10, stiffness: 200 }),
+        );
+        translateX.value = withSpring(0, { damping: 25, stiffness: 250 });
+        runOnJS(triggerDelete)();
       } else {
-        // ── Sous le seuil : retour élastique sans action ─────────────────
+        // ── Sous le seuil : retour élastique ─────────────────────────
         translateX.value = withSpring(0, SPRING_RETURN);
       }
     });
 
   // ─── Styles animés ────────────────────────────────────────────────────────
 
-  /** Foreground : se déplace vers la droite */
+  /** Foreground : se translate selon translationX */
   const foregroundStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
 
   /**
-   * Fond emotional + coche : opacity proportionnelle au progress (0→1).
-   * 0% swipe = invisible, 100% du seuil = pleinement visible.
+   * Fond SUCCESS (droite) — révélé quand on swipe vers la gauche.
+   * Opacity : 0 → 1 à mesure que |translateX| approche du seuil.
    */
-  const backgroundStyle = useAnimatedStyle(() => {
+  const successBgStyle = useAnimatedStyle(() => {
+    const progress =
+      rowWidth.value > 0
+        ? Math.min((-translateX.value) / (rowWidth.value * COMPLETE_RATIO), 1)
+        : 0;
+    return { opacity: Math.max(0, progress) };
+  });
+
+  const checkmarkStyle = useAnimatedStyle(() => {
+    const progress =
+      rowWidth.value > 0
+        ? Math.min((-translateX.value) / (rowWidth.value * COMPLETE_RATIO), 1)
+        : 0;
+    return {
+      opacity: Math.max(0, progress),
+      transform: [{ scale: checkScale.value }],
+    };
+  });
+
+  /**
+   * Fond ERROR (gauche) — révélé quand on swipe vers la droite.
+   */
+  const errorBgStyle = useAnimatedStyle(() => {
     const progress =
       rowWidth.value > 0
         ? Math.min(translateX.value / (rowWidth.value * COMPLETE_RATIO), 1)
         : 0;
-    return { opacity: progress };
+    return { opacity: Math.max(0, progress) };
   });
 
-  /**
-   * Coche : opacity identique au background + scale animé à la complétion.
-   */
-  const checkmarkStyle = useAnimatedStyle(() => {
+  const trashStyle = useAnimatedStyle(() => {
     const progress =
       rowWidth.value > 0
         ? Math.min(translateX.value / (rowWidth.value * COMPLETE_RATIO), 1)
         : 0;
     return {
-      opacity: progress,
-      transform: [{ scale: checkScale.value }],
+      opacity: Math.max(0, progress),
+      transform: [{ scale: trashScale.value }],
     };
   });
 
-  // ─── onLayout ─────────────────────────────────────────────────────────────
-  // Mesure la largeur réelle du composant pour calculer le seuil.
-  // Tourne sur le JS thread mais met à jour un shared value (safe).
   const onLayout = (e: LayoutChangeEvent) => {
     rowWidth.value = e.nativeEvent.layout.width;
   };
-
-  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <Animated.View
       onLayout={onLayout}
       style={[{ position: 'relative', overflow: 'hidden' }, style]}
     >
-      {/* ── Fond emotional — révélé progressivement par le swipe ─────────── */}
+      {/* ── Fond ERROR (gauche→droite = supprimer) ──────────────────── */}
+      {onDelete && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            errorBgStyle,
+            {
+              position: 'absolute',
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: Colors.error,
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+              paddingLeft: 20,
+              borderRadius: 12,
+            },
+          ]}
+        >
+          <Animated.Text
+            style={[
+              trashStyle,
+              { color: '#FFFFFF', fontSize: 18, fontWeight: '700', lineHeight: 22 },
+            ]}
+          >
+            🗑
+          </Animated.Text>
+        </Animated.View>
+      )}
+
+      {/* ── Fond SUCCESS (droite→gauche = valider) ──────────────────── */}
       <Animated.View
         pointerEvents="none"
         style={[
-          backgroundStyle,
+          successBgStyle,
           {
             position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: Colors.emotional,
-            // Aligne la coche à gauche — c'est l'aire révélée en premier
-            alignItems: 'flex-start',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: Colors.success,
+            alignItems: 'flex-end',
             justifyContent: 'center',
-            paddingLeft: 20,
+            paddingRight: 20,
             borderRadius: 12,
           },
         ]}
       >
-        {/* Coche — apparaît progressivement, se scale-in à la complétion */}
         <Animated.Text
           style={[
             checkmarkStyle,
-            {
-              color: '#FFFFFF',
-              fontSize: 20,
-              fontWeight: '700',
-              lineHeight: 24,
-            },
+            { color: '#FFFFFF', fontSize: 20, fontWeight: '700', lineHeight: 24 },
           ]}
         >
           ✓
         </Animated.Text>
       </Animated.View>
 
-      {/* ── Foreground — contenu de la ligne, se translate vers la droite ── */}
+      {/* ── Foreground ──────────────────────────────────────────────── */}
       <GestureDetector gesture={pan}>
         <Animated.View style={foregroundStyle}>{children}</Animated.View>
       </GestureDetector>
