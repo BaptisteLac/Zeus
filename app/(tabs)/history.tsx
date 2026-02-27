@@ -224,7 +224,3 @@ export default function HistoryScreen() {
     </SafeAreaView>
   );
 }
-      )}
-    </SafeAreaView >
-  );
-}

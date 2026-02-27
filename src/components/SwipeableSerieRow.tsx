@@ -27,7 +27,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { LayoutChangeEvent } from 'react-native';
+import { LayoutChangeEvent, ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -48,6 +48,8 @@ interface SwipeableSerieRowProps {
   onComplete: () => void;
   /** Désactive le geste (série déjà validée, chargement…) */
   disabled?: boolean;
+  /** Style du conteneur principal */
+  style?: ViewStyle;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -67,6 +69,7 @@ export function SwipeableSerieRow({
   children,
   onComplete,
   disabled = false,
+  style,
 }: SwipeableSerieRowProps) {
   const haptics = useHaptics();
 
@@ -164,7 +167,7 @@ export function SwipeableSerieRow({
   return (
     <Animated.View
       onLayout={onLayout}
-      style={{ position: 'relative', overflow: 'hidden' }}
+      style={[{ position: 'relative', overflow: 'hidden' }, style]}
     >
       {/* ── Fond emotional — révélé progressivement par le swipe ─────────── */}
       <Animated.View

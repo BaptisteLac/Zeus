@@ -5,7 +5,7 @@
 - [ ] Button.tsx — remplacer PRIMARY_PRESSED_BG par Colors.emotionalPressed (Phase 2 ou 10)
 
 ## Identifié lors de Phase 3 (Typography)
-- [ ] app/design-system.tsx — aligner dataMassive → dataLarge, etc.
+- [x] app/design-system.tsx — supprimé manuellement
 - [ ] src/components/RestTimer.tsx — remplacer tabular-nums inline → Typography.dataLarge
 
 ## Identifié lors de Phase 2 (Buttons)
@@ -55,7 +55,7 @@
 ## Identifié lors de Phase 10b (UI)
 - [ ] Double haptic swipe → supprimer haptics.medium() de handleValidateSet, garder uniquement dans SwipeableSerieRow (Phase 10c)
 - [ ] onStartTimer nextSet vide → déjà identifié en 10a, confirmer le fix de signature (Phase 10c)
-- [ ] SwipeableSerieRow → ajouter prop style?: ViewStyle si besoin d'état visuel externe (10c)
+- [x] SwipeableSerieRow → ajouter prop style?: ViewStyle si besoin d'état visuel externe (10c)
 
 
 ### Cascade restante (Phase 10d ou backlog)

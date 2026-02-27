@@ -344,8 +344,8 @@ export default function ExerciseFormSheet({
                     >
                       <Text
                         className={`text-sm font-mono ${rir === val
-                            ? "text-white font-semibold"
-                            : "text-foreground-muted"
+                          ? "text-white font-semibold"
+                          : "text-foreground-muted"
                           }`}
                       >
                         {val}
@@ -399,9 +399,5 @@ export default function ExerciseFormSheet({
         </View>
       </KeyboardAvoidingView>
     </Modal>
-  );
-}
-      </KeyboardAvoidingView >
-    </Modal >
   );
 }
