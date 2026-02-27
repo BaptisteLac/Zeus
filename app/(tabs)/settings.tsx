@@ -12,6 +12,7 @@ import { loadState, saveState, resetState, computeBlock } from "@/lib/storage";
 import { getCurrentUser, onAuthStateChange } from "@/lib/cloudStorage";
 import { AppState } from "@/lib/types";
 import AuthModal from "@/components/AuthModal";
+import { Colors } from "@/theme/colors";
 
 function SectionLabel({ label }: { label: string }) {
   return (
@@ -117,7 +118,7 @@ export default function SettingsScreen() {
   if (loading || !appState) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator color="#C0694A" />
+        <ActivityIndicator color={Colors.emotional} />
       </View>
     );
   }

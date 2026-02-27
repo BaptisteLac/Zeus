@@ -40,10 +40,10 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/theme/colors';
 import { Typography } from '@/theme/typography';
+import { useHaptics } from '@/hooks/useHaptics';
 
 // ─── Items prédéfinis ─────────────────────────────────────────────────────────
 
@@ -77,6 +77,7 @@ export function RIRPicker({
   label = 'Sélectionner',
 }: RIRPickerProps) {
   const insets = useSafeAreaInsets();
+  const haptics = useHaptics();
 
   // Mêmes animations que OptionsSheet.tsx
   const translateY = useSharedValue(400);
@@ -151,7 +152,7 @@ export function RIRPicker({
             <Picker<number>
               selectedValue={value}
               onValueChange={(itemValue) => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                haptics.light();
                 onChange(itemValue);
               }}
               // itemStyle : iOS uniquement — définit la typo de la roue
@@ -188,7 +189,7 @@ export function RIRPicker({
             })}
           >
             <Text
-              style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}
+              style={{ color: Colors.foreground, fontSize: 16, fontWeight: '700' }}
             >
               Confirmer
             </Text>

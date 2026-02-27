@@ -52,3 +52,15 @@
 - [ ] RestTimer.tsx → supprimer (`grep -r "RestTimer" src/` pour confirmer orphelin)
 - [ ] ExerciseCard.tsx → changer signature onStartTimer: (seconds: number) → (seconds: number, nextSet: string) pour alimenter la DynamicIslandPill
 
+## Identifié lors de Phase 10b (UI)
+- [ ] Double haptic swipe → supprimer haptics.medium() de handleValidateSet, garder uniquement dans SwipeableSerieRow (Phase 10c)
+- [ ] onStartTimer nextSet vide → déjà identifié en 10a, confirmer le fix de signature (Phase 10c)
+- [ ] SwipeableSerieRow → ajouter prop style?: ViewStyle si besoin d'état visuel externe (10c)
+
+
+### Cascade restante (Phase 10d ou backlog)
+- [ ] 🗑️ Supprimer RestTimer.tsx (orphelin confirmé)
+- [ ] Button.tsx → '#FFFFFF' et #C24D29 → Colors.emotionalPressed (noté depuis Phase 2)
+- [ ] RestTimer.tsx → #DC2626 / #22C55E → créer tokens `error` / `success` si pertinent
+- [ ] RIRPicker.tsx → '#FFFFFF' → token foreground
+- [ ] placeholderTextColor → créer token `foregroundSubtle` (existe déjà : #555B6A !)

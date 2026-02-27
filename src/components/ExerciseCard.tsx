@@ -372,7 +372,7 @@ export default function ExerciseCard({
 
             {!isExpanded && lastEntry && (
               <Text className="text-foreground-subtle text-xs font-mono">
-                {lastEntry.charge} kg · {lastEntry.sets.join("-")}
+                {lastEntry.charge} kg · {lastEntry.sets.join("-")} · RIR {lastEntry.rir}
               </Text>
             )}
           </View>
@@ -509,7 +509,7 @@ export default function ExerciseCard({
                               onFocus={() => setActiveSetIndex(i)}
                               keyboardType="numeric"
                               placeholder="—"
-                              placeholderTextColor="#6E6E68"
+                              placeholderTextColor={Colors.foregroundSubtle}
                               className={`text-center text-lg font-mono py-3 px-1 ${textColor}`}
                               style={{ minHeight: 48 }}
                             />

@@ -6,8 +6,10 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
-import * as Haptics from "expo-haptics";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useHaptics } from "@/hooks/useHaptics";
+import { Colors } from "@/theme/colors";
+import { Typography } from "@/theme/typography";
 import { Exercise, WorkoutEntry } from "@/lib/types";
 import { calculateProgression } from "@/lib/progression";
 
@@ -28,9 +30,11 @@ export default function SessionSummary({
   session,
   onClose,
 }: SessionSummaryProps) {
+  const haptics = useHaptics();
   const completedCount = savedExercises.size;
   const totalCount = exercises.length;
 
+  // ─── Volume actuel (séance d'aujourd'hui) ────────────────────────────────────
   const totalVolume = exercises.reduce((acc, ex) => {
     const history = workoutData[ex.id] || [];
     if (history.length === 0) return acc;
@@ -39,6 +43,45 @@ export default function SessionSummary({
     return acc + latest.charge * repsTotal;
   }, 0);
 
+  // ─── Volume de la séance précédente (mêmes exercices = même type de séance) ──
+  const previousVolume = exercises.reduce((acc, ex) => {
+    const history = workoutData[ex.id] || [];
+    if (history.length < 2) return acc;
+    const prev = history[history.length - 2];
+    const repsTotal = prev.sets.reduce((a, b) => a + b, 0);
+    return acc + prev.charge * repsTotal;
+  }, 0);
+
+  const hasComparison = previousVolume > 0;
+  const volumeDelta = totalVolume - previousVolume;
+  const isImprovement = volumeDelta > 0;
+
+  const deltaDisplay = isImprovement
+    ? `+${volumeDelta.toLocaleString("fr-FR")} kg`
+    : volumeDelta === 0
+    ? `= même volume`
+    : `−${Math.abs(volumeDelta).toLocaleString("fr-FR")} kg`;
+
+  // ─── Count-up animé : 0 → totalVolume sur 900ms (ease-out √) ────────────────
+  const [displayVolume, setDisplayVolume] = useState(0);
+  useEffect(() => {
+    if (!visible) {
+      setDisplayVolume(0);
+      return;
+    }
+    const STEPS = 45;
+    const INTERVAL_MS = 900 / STEPS;
+    let step = 0;
+    const id = setInterval(() => {
+      step++;
+      const progress = Math.min(Math.sqrt(step / STEPS), 1);
+      setDisplayVolume(Math.round(totalVolume * progress));
+      if (step >= STEPS) clearInterval(id);
+    }, INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [visible, totalVolume]);
+
+  // ─── Progressions ────────────────────────────────────────────────────────────
   const progressions = exercises
     .map((ex) => {
       const history = workoutData[ex.id] || [];
@@ -54,7 +97,7 @@ export default function SessionSummary({
 
   useEffect(() => {
     if (visible) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
     }
   }, [visible]);
 
@@ -84,20 +127,57 @@ export default function SessionSummary({
           >
             {/* Stats grid */}
             <View className="flex-row gap-3">
+              {/* Volume card — count-up animé + comparaison séance précédente */}
               <View className="flex-1 bg-background rounded-xl p-4 items-center">
-                <Text className="text-foreground-muted text-[10px] uppercase tracking-wider">
+                <Text
+                  style={[
+                    Typography.label,
+                    { textTransform: "uppercase", marginBottom: 4 },
+                  ]}
+                >
                   Volume total
                 </Text>
-                <Text className="text-foreground text-2xl font-mono mt-1">
-                  {totalVolume.toLocaleString("fr-FR")}
-                  <Text className="text-foreground-muted text-sm"> kg</Text>
+                <Text
+                  style={[
+                    Typography.dataMedium,
+                    {
+                      color:
+                        hasComparison && isImprovement
+                          ? Colors.emotional
+                          : Colors.foreground,
+                    },
+                  ]}
+                >
+                  {displayVolume.toLocaleString("fr-FR")}
+                  <Text style={Typography.label}> kg</Text>
                 </Text>
+                {hasComparison && (
+                  <Text
+                    style={{
+                      color: isImprovement
+                        ? Colors.emotional
+                        : Colors.foregroundMuted,
+                      fontSize: 12,
+                      fontWeight: isImprovement ? "700" : "400",
+                      marginTop: 4,
+                    }}
+                  >
+                    {deltaDisplay}
+                  </Text>
+                )}
               </View>
+
+              {/* Exercices card */}
               <View className="flex-1 bg-background rounded-xl p-4 items-center">
-                <Text className="text-foreground-muted text-[10px] uppercase tracking-wider">
+                <Text
+                  style={[
+                    Typography.label,
+                    { textTransform: "uppercase", marginBottom: 4 },
+                  ]}
+                >
                   Exercices
                 </Text>
-                <Text className="text-foreground text-2xl font-mono mt-1">
+                <Text style={Typography.dataMedium}>
                   {completedCount}/{totalCount}
                 </Text>
               </View>

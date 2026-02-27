@@ -1,10 +1,8 @@
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { Colors, BorderRadius } from '@/theme/colors';
+import { useHaptics } from '@/hooks/useHaptics';
 
-// Note: #C24D29 is the pressed state for primary. Should be added to
-// Colors as `emotionalPressed` — see cascade changes.
-const PRIMARY_PRESSED_BG = '#C24D29';
+const PRIMARY_PRESSED_BG = Colors.emotionalPressed;
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
@@ -23,8 +21,9 @@ export function Button({
   disabled = false,
   loading = false,
 }: ButtonProps) {
+  const haptics = useHaptics();
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.light();
     onPress();
   };
 
@@ -90,12 +89,12 @@ export function Button({
           {loading ? (
             <ActivityIndicator
               size="small"
-              color={isPrimary ? '#FFFFFF' : Colors.foreground}
+              color={isPrimary ? Colors.foreground : Colors.foreground}
             />
           ) : (
             <Text
               style={{
-                color: isPrimary ? '#FFFFFF' : Colors.foreground,
+                color: isPrimary ? Colors.foreground : Colors.foreground,
                 fontSize: 16,
                 fontWeight: isPrimary ? '700' : '500',
                 letterSpacing: 0.3,

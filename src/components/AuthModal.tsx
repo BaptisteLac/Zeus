@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from "react-native";
 import { signUp, signInWithPassword, signOut } from "@/lib/cloudStorage";
+import { Colors } from "@/theme/colors";
 
 interface AuthModalProps {
   visible: boolean;
@@ -153,7 +154,7 @@ export default function AuthModal({
                   value={email}
                   onChangeText={setEmail}
                   placeholder="votre@email.com"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={Colors.foregroundSubtle}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -169,7 +170,7 @@ export default function AuthModal({
                     value={password}
                     onChangeText={setPassword}
                     placeholder="••••••••"
-                    placeholderTextColor="#6B7280"
+                    placeholderTextColor={Colors.foregroundSubtle}
                     secureTextEntry={!showPassword}
                     className="bg-background border border-border rounded-xl px-4 py-3.5 text-foreground"
                     style={{ paddingRight: 52 }}

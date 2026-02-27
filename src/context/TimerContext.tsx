@@ -19,9 +19,9 @@ import {
   useState,
 } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import { MMKV } from 'react-native-mmkv';
+import { useHaptics } from '@/hooks/useHaptics';
 
 // ─── MMKV — instance dédiée au timer ─────────────────────────────────────────
 
@@ -107,6 +107,7 @@ export function useTimer(): TimerContextValue {
 export function TimerProvider({ children }: { children: ReactNode }) {
   // Restaure depuis MMKV au démarrage — crash recovery
   const [state, setState] = useState<TimerState>(() => mmkvLoad() ?? INACTIVE);
+  const haptics = useHaptics();
 
   // Ref pour que l'AppState listener lise toujours la valeur actuelle
   // sans se re-abonner à chaque changement d'état
@@ -203,7 +204,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   }) => {
     // Timer déjà actif → remplacement avec haptique Medium
     if (stateRef.current.isActive) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      haptics.medium();
     }
 
     const startedAt = Date.now();

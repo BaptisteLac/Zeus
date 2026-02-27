@@ -23,9 +23,9 @@
  */
 
 import { Pressable, Text, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, BorderRadius } from '@/theme/colors';
+import { useHaptics } from '@/hooks/useHaptics';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,9 +44,10 @@ interface AdjustButtonsProps {
 
 export function AdjustButtons({ adjustments }: AdjustButtonsProps) {
   const insets = useSafeAreaInsets();
+  const haptics = useHaptics();
 
   const handlePress = (onPress: () => void) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.light();
     onPress();
   };
 

@@ -7,7 +7,9 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { loadState } from "@/lib/storage";
+import { Colors } from "@/theme/colors";
 import { getExercisesForSession, initCustomExercises } from "@/lib/program";
 import { AppState, SessionType, WorkoutEntry } from "@/lib/types";
 
@@ -142,7 +144,7 @@ export default function HistoryScreen() {
   if (!appState) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator color="#C0694A" />
+        <ActivityIndicator color={Colors.emotional} />
       </View>
     );
   }
@@ -199,11 +201,24 @@ export default function HistoryScreen() {
           contentContainerStyle={{ paddingBottom: 40 }}
         />
       ) : (
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-foreground-muted text-center text-sm leading-6">
-            Aucune donnée pour la séance {activeSession}.{"\n"}
-            Lance une séance pour voir ton historique ici.
-          </Text>
+        <View className="flex-1 items-center justify-center px-6 gap-4">
+          <View className="items-center gap-2">
+            <Text className="text-2xl">🏋️</Text>
+            <Text className="text-foreground text-base font-medium text-center">
+              Séance {activeSession} — pas encore de données
+            </Text>
+            <Text className="text-foreground-muted text-sm text-center">
+              Lance une séance pour voir tes performances ici.
+            </Text>
+          </View>
+          <Pressable
+            className="bg-primary rounded-xl px-8 py-4 items-center active:opacity-80"
+            onPress={() => router.push('/')}
+          >
+            <Text className="text-white font-semibold text-[13px] uppercase tracking-wider">
+              Démarrer une séance
+            </Text>
+          </Pressable>
         </View>
       )}
     </SafeAreaView>

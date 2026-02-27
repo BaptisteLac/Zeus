@@ -54,6 +54,13 @@ export const Colors = {
   emotionalPressed: '#C24D29',
   /** Achievement / PR — "Tu viens de te dépasser" */
   achievement: '#FF8C42',
+
+  // ─── État système ───────────────────────────────────────────────────────────
+
+  /** État d'erreur, overtime timer, suppression */
+  error: '#DC2626',
+  /** État de succès, validation positive */
+  success: '#22C55E',
 } as const;
 
 // ─── Border Radius ───────────────────────────────────────────────────────────

@@ -31,11 +31,11 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTimer } from '@/context/TimerContext';
 import { Colors, BorderRadius } from '@/theme/colors';
 import { Typography } from '@/theme/typography';
+import { useHaptics } from '@/hooks/useHaptics';
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +52,7 @@ export function DynamicIslandPill() {
   const { isActive, duration, startedAt, exerciseName, nextSet, stopTimer } =
     useTimer();
   const insets = useSafeAreaInsets();
+  const haptics = useHaptics();
 
   const [remaining, setRemaining] = useState(0);
   const [showSheet, setShowSheet] = useState(false);
@@ -140,14 +141,14 @@ export function DynamicIslandPill() {
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
   const handlePillTap = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.light();
     setShowSheet(true);
   };
 
   const handleDismiss = () => {
     stopTimer();
     setShowSheet(false);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    haptics.medium();
   };
 
   // ─── Couleurs selon l'état ──────────────────────────────────────────────────

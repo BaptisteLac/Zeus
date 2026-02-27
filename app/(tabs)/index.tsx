@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -9,8 +9,6 @@ import {
   Modal,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import * as Haptics from "expo-haptics";
-
 import {
   loadState,
   computeBlock,
@@ -28,6 +26,7 @@ import { AppState, Exercise, ExerciseInput, SessionType } from "@/lib/types";
 import { Colors } from "@/theme/colors";
 import { useTimer } from "@/context/TimerContext";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { useHaptics } from "@/hooks/useHaptics";
 import { MilestoneToast } from "@/components/ui/MilestoneToast";
 
 import SessionHeader from "@/components/SessionHeader";
@@ -59,12 +58,15 @@ export default function WorkoutScreen() {
 
   // Milestone — halfway toast
   const [showHalfway, setShowHalfway] = useState(false);
+  // Ref pour éviter le toast parasite après crash recovery (ou double-déclenchement)
+  const halfwayShownRef = useRef(false);
 
   // ── Global timer (Phase 6 — DynamicIslandPill dans _layout.tsx) ─────────────
   const { startTimer } = useTimer();
 
   // ── Auto-save (Phase 9) ──────────────────────────────────────────────────────
   const { saveImmediate, pendingSession, dismissPending } = useAutoSave();
+  const haptics = useHaptics();
 
   // ── Load state ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -118,9 +120,16 @@ export default function WorkoutScreen() {
   }, [exercises]);
 
   // ── Milestone : halfway detection ─────────────────────────────────────────────
+  // halfwayShownRef empêche deux cas parasites :
+  //   1. Double déclenchement si savedExercises.size repasse par halfway (peu probable
+  //      mais possible si un exercice est supprimé puis re-sauvegardé).
+  //   2. Toast incorrect après handleResumeSession — le restore peut setter
+  //      savedExercises à exactement halfway exercices, ce qui déclencherait
+  //      le toast alors que la séance était déjà à mi-chemin avant le crash.
   useEffect(() => {
     const halfway = Math.floor(exercises.length / 2);
-    if (halfway > 0 && savedExercises.size === halfway) {
+    if (halfway > 0 && savedExercises.size === halfway && !halfwayShownRef.current) {
+      halfwayShownRef.current = true;
       setShowHalfway(true);
     }
   }, [savedExercises.size, exercises.length]);
@@ -251,6 +260,7 @@ export default function WorkoutScreen() {
   const handleChangeSession = useCallback(
     (session: SessionType) => {
       const doChange = () => {
+        halfwayShownRef.current = false; // nouvelle séance = droit au toast halfway
         setState((prev) => {
           const updated = {
             ...prev,
@@ -298,6 +308,7 @@ export default function WorkoutScreen() {
   };
 
   const handleConfirmFinish = () => {
+    halfwayShownRef.current = false; // nouvelle séance (A→B→C) = droit au toast halfway
     setShowSummary(false);
     setState((prev) => {
       const updated = {
@@ -311,13 +322,17 @@ export default function WorkoutScreen() {
     setSavedExercises(new Set());
     setExpandedExerciseId(null);
     dismissPending();
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    haptics.success();
   };
 
   // ── Crash recovery ───────────────────────────────────────────────────────────
 
   const handleResumeSession = useCallback(() => {
     if (!pendingSession) return;
+    // Marquer halfway comme "déjà montré" avant de restaurer savedExercises.
+    // Sans ça, setSavedExercises déclenche l'effect halfway et affiche le toast
+    // si le nombre restauré tombe exactement sur Math.floor(exercises.length / 2).
+    halfwayShownRef.current = true;
     setState((prev) => ({
       ...prev,
       currentSession: pendingSession.sessionType,
@@ -377,41 +392,69 @@ export default function WorkoutScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {exercises.map((exercise) => (
-            <ExerciseCard
-              key={exercise.id}
-              exercise={exercise}
-              history={state.workoutData[exercise.id] || []}
-              onSave={(input: ExerciseInput) => handleSaveExercise(exercise.id, input)}
-              onUpdate={(input: ExerciseInput) => handleUpdateExercise(exercise.id, input)}
-              onStartTimer={(seconds) =>
-                startTimer({ duration: seconds, exerciseName: exercise.name, nextSet: '' })
-              }
-              onEditDefinition={() => {
-                setEditingExercise(exercise);
-                setShowForm(true);
-              }}
-              onDelete={() => handleDeleteExercise(exercise.id)}
-              saved={savedExercises.has(exercise.id)}
-              isExpanded={expandedExerciseId === exercise.id}
-              onToggle={() =>
-                setExpandedExerciseId(
-                  expandedExerciseId === exercise.id ? null : exercise.id
-                )
-              }
-            />
-          ))}
+          {exercises.length === 0 ? (
+            /* ── Empty state ──────────────────────────────────────────────────── */
+            <View className="flex-1 items-center justify-center py-16 gap-6">
+              <View className="items-center gap-2">
+                <Text className="text-4xl">💪</Text>
+                <Text className="text-foreground text-base font-medium text-center">
+                  Séance {state.currentSession} — aucun exercice
+                </Text>
+                <Text className="text-foreground-muted text-sm text-center px-8">
+                  Ajoute des exercices pour démarrer ta séance.
+                </Text>
+              </View>
+              <Pressable
+                className="bg-primary rounded-xl px-8 py-4 items-center active:opacity-80"
+                onPress={() => {
+                  setEditingExercise(undefined);
+                  setShowForm(true);
+                }}
+              >
+                <Text className="text-white font-semibold text-[13px] uppercase tracking-wider">
+                  + Ajouter un exercice
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              {exercises.map((exercise) => (
+                <ExerciseCard
+                  key={exercise.id}
+                  exercise={exercise}
+                  history={state.workoutData[exercise.id] || []}
+                  onSave={(input: ExerciseInput) => handleSaveExercise(exercise.id, input)}
+                  onUpdate={(input: ExerciseInput) => handleUpdateExercise(exercise.id, input)}
+                  onStartTimer={(seconds) =>
+                    startTimer({ duration: seconds, exerciseName: exercise.name, nextSet: '' })
+                  }
+                  onEditDefinition={() => {
+                    setEditingExercise(exercise);
+                    setShowForm(true);
+                  }}
+                  onDelete={() => handleDeleteExercise(exercise.id)}
+                  saved={savedExercises.has(exercise.id)}
+                  isExpanded={expandedExerciseId === exercise.id}
+                  onToggle={() =>
+                    setExpandedExerciseId(
+                      expandedExerciseId === exercise.id ? null : exercise.id
+                    )
+                  }
+                />
+              ))}
 
-          {/* Add exercise */}
-          <Pressable
-            className="border-2 border-dashed border-primary/20 rounded-xl py-4 items-center mt-2 active:border-primary/50"
-            onPress={() => {
-              setEditingExercise(undefined);
-              setShowForm(true);
-            }}
-          >
-            <Text className="text-primary/50 text-2xl font-light">+</Text>
-          </Pressable>
+              {/* Add exercise */}
+              <Pressable
+                className="border-2 border-dashed border-primary/20 rounded-xl py-4 items-center mt-2 active:border-primary/50"
+                onPress={() => {
+                  setEditingExercise(undefined);
+                  setShowForm(true);
+                }}
+              >
+                <Text className="text-primary/50 text-2xl font-light">+</Text>
+              </Pressable>
+            </>
+          )}
         </ScrollView>
 
         {/* Finish session button */}

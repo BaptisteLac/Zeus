@@ -17,8 +17,10 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Exercise } from "@/lib/types";
 import { CatalogEntry } from "@/lib/program";
+import { Colors } from "@/theme/colors";
 
 interface ExerciseFormSheetProps {
   open: boolean;
@@ -48,6 +50,7 @@ export default function ExerciseFormSheet({
   onDelete,
   catalog = [],
 }: ExerciseFormSheetProps) {
+  const insets = useSafeAreaInsets();
   const isEditMode = !!exercise;
 
   const [name, setName] = useState("");
@@ -224,14 +227,15 @@ export default function ExerciseFormSheet({
 
           {/* Sheet */}
           <Animated.View
-            style={[sheetStyle, { backgroundColor: "#111111", borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%" }]}
+            style={[sheetStyle, { backgroundColor: Colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%" }]}
           >
             {/* Handle */}
             <View className="w-10 h-1 bg-border rounded-full mx-auto mt-3 mb-5" />
 
             <ScrollView
+              style={{ flex: 1 }}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}
               showsVerticalScrollIndicator={false}
             >
               {/* Title */}
@@ -256,7 +260,7 @@ export default function ExerciseFormSheet({
                     setShowSuggestions(t.trim().length > 0 && !isEditMode);
                   }}
                   placeholder="Ex: Squat, Développé couché…"
-                  placeholderTextColor="#6E6E68"
+                  placeholderTextColor={Colors.foregroundSubtle}
                   autoCorrect={false}
                   autoCapitalize="words"
                   className="bg-surface border border-border rounded-xl px-4 py-3 text-foreground text-base"
@@ -351,11 +355,24 @@ export default function ExerciseFormSheet({
                 </View>
               </View>
 
+            </ScrollView>
+
+            {/* ── Footer fixe — Thumb Zone ───────────────────────────────────── */}
+            <View
+              style={{
+                paddingHorizontal: 20,
+                paddingTop: 12,
+                paddingBottom: Math.max(insets.bottom, 16),
+                gap: 10,
+                borderTopWidth: 1,
+                borderTopColor: Colors.border,
+              }}
+            >
               {/* Submit */}
               <Pressable
                 onPress={handleSubmit}
                 disabled={!canSubmit}
-                className={`rounded-full py-4 items-center mb-3 active:opacity-80 ${canSubmit ? "bg-primary" : "bg-surface border border-border"
+                className={`rounded-full py-4 items-center active:opacity-80 ${canSubmit ? "bg-primary" : "bg-surface border border-border"
                   }`}
               >
                 <Text
@@ -377,7 +394,7 @@ export default function ExerciseFormSheet({
                   </Text>
                 </Pressable>
               )}
-            </ScrollView>
+            </View>
           </Animated.View>
         </View>
       </KeyboardAvoidingView>
