@@ -1,33 +1,33 @@
 import { Exercise, SessionType } from './types';
 
 const sessionA: Exercise[] = [
-  { id: 'a1', name: 'Hack Squat', setsMin: 3, setsMax: 4, repsMin: 6, repsMax: 8, charge: 0, rest: 120, rir: '1-2' },
-  { id: 'a2', name: 'Développé couché machine', setsMin: 3, setsMax: 4, repsMin: 6, repsMax: 10, charge: 0, rest: 90, rir: '1' },
-  { id: 'a3', name: 'Pec Deck', setsMin: 3, setsMax: 3, repsMin: 12, repsMax: 15, charge: 0, rest: 60, rir: '1' },
-  { id: 'a4', name: 'Développé épaules Smith machine', setsMin: 3, setsMax: 3, repsMin: 8, repsMax: 12, charge: 0, rest: 90, rir: '1-2' },
-  { id: 'a5', name: 'Élévations latérales poulie', setsMin: 3, setsMax: 4, repsMin: 12, repsMax: 20, charge: 0, rest: 60, rir: '1' },
-  { id: 'a6', name: 'Extension triceps corde', setsMin: 3, setsMax: 3, repsMin: 10, repsMax: 15, charge: 0, rest: 60, rir: '1' },
-  { id: 'a7', name: 'Mollet', setsMin: 2, setsMax: 2, repsMin: 10, repsMax: 15, charge: 0, rest: 60, rir: '1' },
+  { id: 'a1', name: 'Hack Squat', sets: 3, repsMin: 6, repsMax: 8, charge: 0, rest: 120, rir: '1-2' },
+  { id: 'a2', name: 'Développé couché machine', sets: 3, repsMin: 6, repsMax: 10, charge: 0, rest: 90, rir: '1' },
+  { id: 'a3', name: 'Pec Deck', sets: 3, repsMin: 12, repsMax: 15, charge: 0, rest: 60, rir: '1' },
+  { id: 'a4', name: 'Développé épaules Smith machine', sets: 3, repsMin: 8, repsMax: 12, charge: 0, rest: 90, rir: '1-2' },
+  { id: 'a5', name: 'Élévations latérales poulie', sets: 3, repsMin: 12, repsMax: 20, charge: 0, rest: 60, rir: '1' },
+  { id: 'a6', name: 'Extension triceps corde', sets: 3, repsMin: 10, repsMax: 15, charge: 0, rest: 60, rir: '1' },
+  { id: 'a7', name: 'Mollet', sets: 2, repsMin: 10, repsMax: 15, charge: 0, rest: 60, rir: '1' },
 ];
 
 const sessionB: Exercise[] = [
-  { id: 'b1', name: 'Traction', setsMin: 3, setsMax: 4, repsMin: 6, repsMax: 10, charge: 0, rest: 90, rir: '1-2' },
-  { id: 'b2', name: 'Rowing convergent', setsMin: 3, setsMax: 3, repsMin: 8, repsMax: 12, charge: 0, rest: 90, rir: '1-2' },
-  { id: 'b3', name: 'Hip Thrust', setsMin: 3, setsMax: 3, repsMin: 6, repsMax: 10, charge: 0, rest: 120, rir: '1' },
-  { id: 'b4', name: 'Leg curl assis', setsMin: 3, setsMax: 3, repsMin: 10, repsMax: 15, charge: 0, rest: 75, rir: '1' },
-  { id: 'b5', name: 'Curl incliné haltères', setsMin: 3, setsMax: 3, repsMin: 8, repsMax: 12, charge: 0, rest: 75, rir: '1' },
-  { id: 'b6', name: 'Curl pupitre machine', setsMin: 3, setsMax: 3, repsMin: 10, repsMax: 15, charge: 0, rest: 60, rir: '1' },
-  { id: 'b7', name: 'Rear Deck', setsMin: 3, setsMax: 3, repsMin: 15, repsMax: 20, charge: 0, rest: 60, rir: '1-2' },
+  { id: 'b1', name: 'Traction', sets: 3, repsMin: 6, repsMax: 10, charge: 0, rest: 90, rir: '1-2' },
+  { id: 'b2', name: 'Rowing convergent', sets: 3, repsMin: 8, repsMax: 12, charge: 0, rest: 90, rir: '1-2' },
+  { id: 'b3', name: 'Hip Thrust', sets: 3, repsMin: 6, repsMax: 10, charge: 0, rest: 120, rir: '1' },
+  { id: 'b4', name: 'Leg curl assis', sets: 3, repsMin: 10, repsMax: 15, charge: 0, rest: 75, rir: '1' },
+  { id: 'b5', name: 'Curl incliné haltères', sets: 3, repsMin: 8, repsMax: 12, charge: 0, rest: 75, rir: '1' },
+  { id: 'b6', name: 'Curl pupitre machine', sets: 3, repsMin: 10, repsMax: 15, charge: 0, rest: 60, rir: '1' },
+  { id: 'b7', name: 'Rear Deck', sets: 3, repsMin: 15, repsMax: 20, charge: 0, rest: 60, rir: '1-2' },
 ];
 
 const sessionC: Exercise[] = [
-  { id: 'c1', name: 'Développé couché machine', setsMin: 3, setsMax: 4, repsMin: 6, repsMax: 10, charge: 0, rest: 90, rir: '1' },
-  { id: 'c2', name: 'Pec Deck', setsMin: 3, setsMax: 3, repsMin: 12, repsMax: 20, charge: 0, rest: 60, rir: '1' },
-  { id: 'c3', name: 'Élévations latérales poulie', setsMin: 3, setsMax: 3, repsMin: 15, repsMax: 20, charge: 0, rest: 50, rir: '1' },
-  { id: 'c4', name: 'Dips assistés', setsMin: 3, setsMax: 3, repsMin: 8, repsMax: 12, charge: 0, rest: 90, rir: '1' },
-  { id: 'c5', name: 'Extension triceps corde', setsMin: 3, setsMax: 3, repsMin: 12, repsMax: 15, charge: 0, rest: 60, rir: '1' },
-  { id: 'c6', name: 'Curl EZ barre', setsMin: 3, setsMax: 3, repsMin: 10, repsMax: 15, charge: 0, rest: 60, rir: '1' },
-  { id: 'c7', name: 'Leg curl extension', setsMin: 3, setsMax: 3, repsMin: 12, repsMax: 15, charge: 0, rest: 60, rir: '1' },
+  { id: 'c1', name: 'Développé couché machine', sets: 3, repsMin: 6, repsMax: 10, charge: 0, rest: 90, rir: '1' },
+  { id: 'c2', name: 'Pec Deck', sets: 3, repsMin: 12, repsMax: 20, charge: 0, rest: 60, rir: '1' },
+  { id: 'c3', name: 'Élévations latérales poulie', sets: 3, repsMin: 15, repsMax: 20, charge: 0, rest: 50, rir: '1' },
+  { id: 'c4', name: 'Dips assistés', sets: 3, repsMin: 8, repsMax: 12, charge: 0, rest: 90, rir: '1' },
+  { id: 'c5', name: 'Extension triceps corde', sets: 3, repsMin: 12, repsMax: 15, charge: 0, rest: 60, rir: '1' },
+  { id: 'c6', name: 'Curl EZ barre', sets: 3, repsMin: 10, repsMax: 15, charge: 0, rest: 60, rir: '1' },
+  { id: 'c7', name: 'Leg curl extension', sets: 3, repsMin: 12, repsMax: 15, charge: 0, rest: 60, rir: '1' },
 ];
 
 export const sessions: Record<SessionType, Exercise[]> = {
@@ -86,9 +86,9 @@ export function getExercisesForSession(
   return base.map((ex) => {
     let adjusted = { ...ex };
 
-    // Block 2: +1 setsMax on specified exercises
+    // Block 2: +1 set on specified exercises
     if (block >= 2 && block2ExtraSetIds.has(ex.id)) {
-      adjusted.setsMax = ex.setsMax + 1;
+      adjusted.sets = ex.sets + 1;
     }
 
     // Block 3: First exercise of each session → 4-6 reps
@@ -103,8 +103,7 @@ export function getExercisesForSession(
 
 export interface CatalogEntry {
   name: string;
-  setsMin: number;
-  setsMax: number;
+  sets: number;
   repsMin: number;
   repsMax: number;
   charge: number;
@@ -134,8 +133,7 @@ export function getAllExerciseCatalog(
       } else {
         map.set(key, {
           name: ex.name,
-          setsMin: ex.setsMin,
-          setsMax: ex.setsMax,
+          sets: ex.sets,
           repsMin: ex.repsMin,
           repsMax: ex.repsMax,
           charge: ex.charge,

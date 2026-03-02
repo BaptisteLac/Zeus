@@ -80,18 +80,17 @@ export default function WorkoutScreen() {
         loaded = { ...loaded, customExercises: initCustomExercises() };
         saveImmediate(loaded);
       } else {
-        // Migration v2 : ancien format avait `sets` au lieu de `setsMin/setsMax`
+        // Migration v3 : ancien format avait `setsMin/setsMax` au lieu de `sets`
         const needsMigration = Object.values(loaded.customExercises)
           .flat()
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .some((ex: any) => ex.sets !== undefined && ex.setsMin === undefined);
+          .some((ex: any) => ex.sets === undefined);
         if (needsMigration) {
           const migrated = { ...loaded.customExercises };
           for (const session of ['A', 'B', 'C'] as const) {
             migrated[session] = (loaded.customExercises[session] || []).map((ex: any) => ({
               ...ex,
-              setsMin: ex.setsMin ?? ex.sets ?? 3,
-              setsMax: ex.setsMax ?? ex.sets ?? 3,
+              sets: ex.sets ?? ex.setsMin ?? 3,
               charge: ex.charge ?? 0,
             }));
           }
@@ -118,17 +117,17 @@ export default function WorkoutScreen() {
           if (!loaded.customExercises) {
             loaded = { ...loaded, customExercises: initCustomExercises() };
           } else {
+            // Migration v3 : ancien format avait `setsMin/setsMax` au lieu de `sets`
             const needsMigration = Object.values(loaded.customExercises)
               .flat()
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              .some((ex: any) => ex.sets !== undefined && ex.setsMin === undefined);
+              .some((ex: any) => ex.sets === undefined);
             if (needsMigration) {
               const migrated = { ...loaded.customExercises };
               for (const session of ['A', 'B', 'C'] as const) {
                 migrated[session] = (loaded.customExercises[session] || []).map((ex: any) => ({
                   ...ex,
-                  setsMin: ex.setsMin ?? ex.sets ?? 3,
-                  setsMax: ex.setsMax ?? ex.sets ?? 3,
+                  sets: ex.sets ?? ex.setsMin ?? 3,
                   charge: ex.charge ?? 0,
                 }));
               }
@@ -488,16 +487,30 @@ export default function WorkoutScreen() {
               <Pressable
                 onPress={handleFinishSession}
                 disabled={savedExercises.size === 0}
-                className={`rounded-2xl py-5 items-center justify-center mt-3 active:opacity-75 ${savedExercises.size === 0
-                  ? 'bg-surface border border-border'
-                  : allSaved
-                    ? 'bg-emotional'
-                    : 'bg-accent'
-                  }`}
+                style={({ pressed }) => ({
+                  borderRadius: 16,
+                  paddingVertical: 20,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginTop: 12,
+                  opacity: pressed ? 0.75 : 1,
+                  backgroundColor: savedExercises.size === 0
+                    ? Colors.surface
+                    : allSaved
+                      ? Colors.emotional
+                      : Colors.accent,
+                  borderWidth: savedExercises.size === 0 ? 1 : 0,
+                  borderColor: Colors.border,
+                })}
               >
                 <Text
-                  className={`text-[13px] font-bold uppercase tracking-widest ${savedExercises.size === 0 ? 'text-foreground-subtle' : 'text-white'
-                    }`}
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: 1.5,
+                    color: savedExercises.size === 0 ? Colors.foregroundSubtle : '#FFFFFF',
+                  }}
                 >
                   {savedExercises.size === 0
                     ? 'Terminer la séance'

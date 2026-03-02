@@ -180,7 +180,6 @@ function SerieRow({ index, value, state, onChangeText, onFocus, onValidate, onDe
           alignItems: "center",
           backgroundColor: state === "active" ? Colors.surfaceElevated : "transparent",
           borderRadius: 12,
-          marginBottom: 2,
           paddingHorizontal: 12,
           paddingVertical: 2,
           borderWidth: 1,
@@ -287,7 +286,7 @@ export default function ExerciseCard({
 
   const [charge, setCharge] = useState(defaultCharge);
   const [sets, setSets] = useState<number[]>(
-    Array.from({ length: exercise.setsMin }, (_, i) =>
+    Array.from({ length: exercise.sets }, (_, i) =>
       lastEntry?.sets[i] !== undefined ? lastEntry.sets[i] : 0
     )
   );
@@ -296,7 +295,7 @@ export default function ExerciseCard({
   const [savedValues, setSavedValues] = useState<ExerciseInput | null>(null);
   const [activeSetIndex, setActiveSetIndex] = useState(0);
   const [completedSets, setCompletedSets] = useState<Set<number>>(
-    () => saved ? new Set(Array.from({ length: exercise.setsMin }, (_, i) => i)) : new Set()
+    () => saved ? new Set(Array.from({ length: exercise.sets }, (_, i) => i)) : new Set()
   );
   const [showOptions, setShowOptions] = useState(false);
 
@@ -309,17 +308,17 @@ export default function ExerciseCard({
   // Resync sets when exercise definition changes
   useEffect(() => {
     setSets((prev) => {
-      if (prev.length === exercise.setsMin) return prev;
-      return Array.from({ length: exercise.setsMin }, (_, i) => prev[i] ?? 0);
+      if (prev.length === exercise.sets) return prev;
+      return Array.from({ length: exercise.sets }, (_, i) => prev[i] ?? 0);
     });
     setCompletedSets((prev) => {
       const next = new Set(prev);
       for (const idx of next) {
-        if (idx >= exercise.setsMin) next.delete(idx);
+        if (idx >= exercise.sets) next.delete(idx);
       }
       return next;
     });
-  }, [exercise.setsMin]);
+  }, [exercise.sets]);
 
   // Track modifications after save
   useEffect(() => {
@@ -595,7 +594,7 @@ export default function ExerciseCard({
             {!isExpanded && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <Text style={{ fontSize: 13, color: Colors.foregroundMuted }}>
-                  {exercise.setsMin}–{exercise.setsMax} × {exercise.repsMin}–{exercise.repsMax} reps
+                  {exercise.sets} × {exercise.repsMin}–{exercise.repsMax} reps
                 </Text>
                 {lastEntry && (
                   <Text style={{
@@ -677,7 +676,7 @@ export default function ExerciseCard({
             </View>
 
             {/* Séries — Set Rows horizontaux */}
-            <View style={{ gap: 4 }}>
+            <View style={{ gap: 10 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                 <Text style={{
                   fontSize: 10,

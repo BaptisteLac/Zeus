@@ -67,7 +67,12 @@ export function DynamicIslandPill() {
     }
     const tick = () => {
       const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-      setRemaining(duration - elapsed);
+      const rem = duration - elapsed;
+      setRemaining(rem);
+      if (rem <= 0) {
+        haptics.success();
+        stopTimer();
+      }
     };
     tick(); // Mise à jour immédiate sans attendre 1s
     const id = setInterval(tick, 1000);

@@ -1,8 +1,7 @@
 export interface Exercise {
   id: string;
   name: string;
-  setsMin: number;
-  setsMax: number;
+  sets: number;
   repsMin: number;
   repsMax: number;
   charge: number; // kg — charge initiale suggérée
