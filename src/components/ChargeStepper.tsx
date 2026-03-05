@@ -18,10 +18,6 @@ interface ChargeStepperProps {
   max?: number;
 }
 
-// ─── StepButton ───────────────────────────────────────────────────────────────
-// flex:1 est dans useAnimatedStyle → l'Animated.View est un enfant flex direct
-// du row parent, sans wrapper intermédiaire qui casserait la résolution de taille.
-
 interface StepButtonProps {
   label: string;
   onPress: () => void;
@@ -31,7 +27,6 @@ function StepButton({ label, onPress }: StepButtonProps) {
   const haptics = useHaptics();
   const scale = useSharedValue(1);
 
-  // flex:1 ICI → l'Animated.View participe au layout flex du parent row
   const animStyle = useAnimatedStyle(() => ({
     flex: 1,
     transform: [{ scale: scale.value }],
@@ -48,11 +43,6 @@ function StepButton({ label, onPress }: StepButtonProps) {
 
   return (
     <Animated.View style={animStyle}>
-      {/*
-       * Pressable sans width explicite → React Native l'étire automatiquement
-       * à la largeur de son parent (Animated.View flex:1 dans un row).
-       * height:52 fixe l'axe vertical.
-       */}
       <Pressable
         onPress={handlePress}
         hitSlop={6}
@@ -81,8 +71,6 @@ function StepButton({ label, onPress }: StepButtonProps) {
     </Animated.View>
   );
 }
-
-// ─── ChargeStepper ────────────────────────────────────────────────────────────
 
 export function ChargeStepper({
   value,
@@ -117,13 +105,11 @@ export function ChargeStepper({
         gap: 10,
       }}
     >
-      {/* ── Bouton − : Animated.View flex:1 direct dans le row ── */}
       <StepButton
         label={`−${step} kg`}
         onPress={() => adjust(-step)}
       />
 
-      {/* ── Valeur centrale : flex:1, height:52 explicite ── */}
       <Pressable
         onPress={() => inputRef.current?.focus()}
         style={{ flex: 1, height: 52 }}
@@ -185,7 +171,6 @@ export function ChargeStepper({
         </View>
       </Pressable>
 
-      {/* ── Bouton + : Animated.View flex:1 direct dans le row ── */}
       <StepButton
         label={`+${step} kg`}
         onPress={() => adjust(step)}

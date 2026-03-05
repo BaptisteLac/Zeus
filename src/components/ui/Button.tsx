@@ -27,7 +27,6 @@ export function Button({
     onPress();
   };
 
-  // ─── Ghost ───────────────────────────────────────────────────────────────
   if (variant === 'ghost') {
     return (
       <Pressable
@@ -41,8 +40,8 @@ export function Button({
               color: disabled
                 ? Colors.foregroundSubtle
                 : pressed
-                ? Colors.foreground
-                : Colors.foregroundMuted,
+                  ? Colors.foreground
+                  : Colors.foregroundMuted,
               opacity: pressed ? 0.7 : 1,
               fontSize: 15,
               fontWeight: '400',
@@ -55,7 +54,6 @@ export function Button({
     );
   }
 
-  // ─── Primary & Secondary ─────────────────────────────────────────────────
   const isPrimary = variant === 'primary';
 
   return (
@@ -79,8 +77,8 @@ export function Button({
                 ? PRIMARY_PRESSED_BG
                 : Colors.emotional
               : pressed
-              ? Colors.surfaceElevated
-              : Colors.surface,
+                ? Colors.surfaceElevated
+                : Colors.surface,
             ...(isPrimary
               ? {}
               : { borderWidth: 1, borderColor: Colors.border }),

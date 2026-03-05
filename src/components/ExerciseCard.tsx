@@ -24,7 +24,6 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { PRBadge, PRGlow } from "@/components/ui/PRBadge";
 import { SwipeableSerieRow } from "@/components/SwipeableSerieRow";
 
-// ─── SetCheckmark ────────────────────────────────────────────────────────────
 function SetCheckmark() {
   const scale = useSharedValue(0);
   useEffect(() => {
@@ -43,8 +42,6 @@ function SetCheckmark() {
   );
 }
 
-// ─── StatusDot ───────────────────────────────────────────────────────────────
-// Petit indicateur coloré dans le header représentant l'état de la card
 interface StatusDotProps {
   isPR: boolean;
   saved: boolean;
@@ -56,7 +53,6 @@ function StatusDot({ isPR, saved, isExpanded }: StatusDotProps) {
 
   useEffect(() => {
     if (isExpanded && !saved) {
-      // Pulse doux en état actif
       pulse.value = withSequence(
         withTiming(1.4, { duration: 600 }),
         withTiming(1, { duration: 600 }),
@@ -93,7 +89,6 @@ function StatusDot({ isPR, saved, isExpanded }: StatusDotProps) {
   );
 }
 
-// ─── AnimatedChevron ─────────────────────────────────────────────────────────
 function AnimatedChevron({ isExpanded }: { isExpanded: boolean }) {
   const rotation = useSharedValue(isExpanded ? 1 : 0);
 
@@ -125,8 +120,6 @@ function AnimatedChevron({ isExpanded }: { isExpanded: boolean }) {
   );
 }
 
-// ─── Props ───────────────────────────────────────────────────────────────────
-
 interface ExerciseCardProps {
   exercise: Exercise;
   history: WorkoutEntry[];
@@ -140,8 +133,6 @@ interface ExerciseCardProps {
   onToggle?: () => void;
 }
 
-// ─── SerieRow ────────────────────────────────────────────────────────────────
-// Ligne horizontale remplaçant les chips carrées
 interface SerieRowProps {
   index: number;
   value: number;
@@ -191,7 +182,6 @@ function SerieRow({ index, value, state, onChangeText, onFocus, onValidate, onDe
                 : "transparent",
         }}
       >
-        {/* Label S1 / S2 / S3 */}
         <View style={{ width: 36 }}>
           {state === "done" ? (
             <SetCheckmark />
@@ -210,7 +200,6 @@ function SerieRow({ index, value, state, onChangeText, onFocus, onValidate, onDe
           )}
         </View>
 
-        {/* Input reps — largeur fixe, centré */}
         <View style={{ flex: 1 }}>
           <TextInput
             value={value > 0 ? String(value) : ""}
@@ -234,7 +223,6 @@ function SerieRow({ index, value, state, onChangeText, onFocus, onValidate, onDe
           />
         </View>
 
-        {/* Hint swipe ou unité reps */}
         <View style={{ width: 48, alignItems: "flex-end" }}>
           {state === "done" ? (
             <Text style={{ fontSize: 11, color: Colors.success + "CC", fontWeight: "600" }}>
@@ -254,8 +242,6 @@ function SerieRow({ index, value, state, onChangeText, onFocus, onValidate, onDe
     </SwipeableSerieRow>
   );
 }
-
-// ─── ExerciseCard ─────────────────────────────────────────────────────────────
 
 export default function ExerciseCard({
   exercise,
@@ -299,13 +285,11 @@ export default function ExerciseCard({
   );
   const [showOptions, setShowOptions] = useState(false);
 
-  // Button press scale animation
   const btnScale = useSharedValue(1);
   const btnAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: btnScale.value }],
   }));
 
-  // Resync sets when exercise definition changes
   useEffect(() => {
     setSets((prev) => {
       if (prev.length === exercise.sets) return prev;
@@ -320,7 +304,6 @@ export default function ExerciseCard({
     });
   }, [exercise.sets]);
 
-  // Track modifications after save
   useEffect(() => {
     if (saved && savedValues) {
       const changed =
@@ -365,7 +348,7 @@ export default function ExerciseCard({
   };
 
   const handleDeleteSet = (setIndex: number) => {
-    if (sets.length <= 1) return; // Garder au moins 1 série
+    if (sets.length <= 1) return;
     setSets((prev) => prev.filter((_, i) => i !== setIndex));
     setCompletedSets((prev) => {
       const next = new Set<number>();
@@ -391,14 +374,13 @@ export default function ExerciseCard({
 
   const handleAddSet = () => {
     setSets((prev) => [...prev, 0]);
-    setActiveSetIndex(sets.length); // Focus sur la nouvelle série
+    setActiveSetIndex(sets.length);
     haptics.light();
   };
 
   const handleMainAction = () => {
     if (!canSave) return;
 
-    // Animate button
     btnScale.value = withSequence(
       withTiming(0.96, { duration: 80 }),
       withSpring(1, { damping: 12, stiffness: 300 }),
@@ -482,7 +464,6 @@ export default function ExerciseCard({
 
   const buttonConfig = getButtonConfig();
 
-  // ─── PR Detection ─────────────────────────────────────────────────────────
   const priorEntries = history.slice(0, history.length > 0 ? -1 : 0);
   const maxPriorCharge =
     priorEntries.length > 0
@@ -505,7 +486,6 @@ export default function ExerciseCard({
     );
   };
 
-  // ─── Card border ──────────────────────────────────────────────────────────
   const cardBorderColor = isPR
     ? Colors.achievement + "60"
     : saved
@@ -525,7 +505,6 @@ export default function ExerciseCard({
           overflow: "hidden",
         }}
       >
-        {/* Saved glow */}
         {saved && !isPR && (
           <View
             pointerEvents="none"
@@ -538,7 +517,6 @@ export default function ExerciseCard({
         )}
         <PRGlow visible={isPR} />
 
-        {/* ── Header ──────────────────────────────────────────────────── */}
         <Pressable
           onPress={() => onToggle?.()}
           onLongPress={() => {
@@ -548,7 +526,6 @@ export default function ExerciseCard({
           delayLongPress={500}
           style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 }}
         >
-          {/* Ligne 1 : Nom + Options + Chevron */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 8 }}>
               <StatusDot isPR={isPR} saved={saved} isExpanded={isExpanded} />
@@ -588,9 +565,7 @@ export default function ExerciseCard({
             </View>
           </View>
 
-          {/* Ligne 2 : Sous-titre contextuel */}
           <View style={{ marginTop: 6, marginLeft: 16 }}>
-            {/* État collapsed — résumé de l'exercice */}
             {!isExpanded && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <Text style={{ fontSize: 13, color: Colors.foregroundMuted }}>
@@ -608,7 +583,6 @@ export default function ExerciseCard({
               </View>
             )}
 
-            {/* État expanded — cible de reps + RIR objectif */}
             {isExpanded && (
               <Text style={{ fontSize: 12, color: Colors.foregroundMuted }}>
                 {exercise.repsMin}–{exercise.repsMax} reps · RIR cible {exercise.rir}
@@ -616,7 +590,6 @@ export default function ExerciseCard({
             )}
           </View>
 
-          {/* Badge PR */}
           {isPR && (
             <View style={{ marginTop: 8, marginLeft: 16 }}>
               <PRBadge visible={isPR} value={`${charge} kg`} />
@@ -624,11 +597,9 @@ export default function ExerciseCard({
           )}
         </Pressable>
 
-        {/* ── Contenu expanded ────────────────────────────────────────── */}
         {isExpanded && (
           <View style={{ paddingHorizontal: 16, paddingBottom: 20, gap: 20 }}>
 
-            {/* Progression banner */}
             {progression && (
               <View
                 style={{
@@ -661,7 +632,6 @@ export default function ExerciseCard({
               </View>
             )}
 
-            {/* Charge */}
             <View style={{ gap: 6 }}>
               <Text style={{
                 fontSize: 10,
@@ -675,7 +645,6 @@ export default function ExerciseCard({
               <ChargeStepper value={charge} onChange={setCharge} step={2.5} />
             </View>
 
-            {/* Séries — Set Rows horizontaux */}
             <View style={{ gap: 10 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                 <Text style={{
@@ -709,7 +678,6 @@ export default function ExerciseCard({
                 );
               })}
 
-              {/* Barre de progression */}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 }}>
                 <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: Colors.surfaceElevated, overflow: "hidden" }}>
                   <View
@@ -726,7 +694,6 @@ export default function ExerciseCard({
                 </Text>
               </View>
 
-              {/* Bouton Ajouter une série */}
               {!saved && (
                 <Pressable
                   onPress={handleAddSet}
@@ -755,7 +722,6 @@ export default function ExerciseCard({
               )}
             </View>
 
-            {/* RIR */}
             <View style={{ gap: 6 }}>
               <Text style={{
                 fontSize: 10,
@@ -769,7 +735,6 @@ export default function ExerciseCard({
               <RIRSelector value={rir} onChange={setRir} />
             </View>
 
-            {/* Bouton CTA principal */}
             <Animated.View style={btnAnimStyle}>
               <Pressable
                 onPress={handleMainAction}
@@ -819,7 +784,6 @@ export default function ExerciseCard({
         )}
       </View>
 
-      {/* Options bottom sheet */}
       <OptionsSheet
         visible={showOptions}
         onClose={() => setShowOptions(false)}

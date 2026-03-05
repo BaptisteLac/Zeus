@@ -43,7 +43,6 @@ export default function SessionHeader({
         className="bg-background/90 border-b border-border/50"
       >
         <View className="px-5 pb-3 flex-row items-end justify-between">
-          {/* Left: date + session selector */}
           <View>
             <Text className="text-primary text-[11px] font-semibold tracking-[0.12em] uppercase mb-1">
               {dateStr} · Bloc {block} · S{week}
@@ -62,7 +61,6 @@ export default function SessionHeader({
             </Pressable>
           </View>
 
-          {/* Right: progress + auth */}
           <View className="flex-row items-center gap-3 pb-1">
             {totalCount > 0 && (
               <View className="px-3 py-1.5 rounded-full bg-surface-elevated border border-border">
@@ -99,7 +97,6 @@ export default function SessionHeader({
           </View>
         </View>
 
-        {/* Progress bar */}
         <View className="h-0.5 bg-surface">
           <View
             className="h-full bg-primary"
@@ -108,7 +105,6 @@ export default function SessionHeader({
         </View>
       </View>
 
-      {/* Session picker modal */}
       <Modal
         visible={showPicker}
         transparent

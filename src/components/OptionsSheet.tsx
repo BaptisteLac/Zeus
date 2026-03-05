@@ -53,32 +53,26 @@ export function OptionsSheet({
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={StyleSheet.absoluteFill} className="justify-end">
-        {/* Backdrop */}
         <TouchableWithoutFeedback onPress={onClose}>
           <Animated.View
             style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.6)" }, backdropStyle]}
           />
         </TouchableWithoutFeedback>
 
-        {/* Sheet */}
         <Animated.View
           style={sheetStyle}
           className="bg-surface rounded-t-3xl px-6 pb-10 pt-3"
         >
-          {/* Handle */}
           <View className="w-10 h-1 bg-border rounded-full mx-auto mb-6" />
 
-          {/* Title */}
           <Text className="text-foreground text-2xl font-semibold mb-1">{title}</Text>
           <Text className="text-foreground-muted text-sm mb-6">Gérer cet exercice</Text>
 
-          {/* Actions */}
           <View className="gap-3">
             <Pressable
               onPress={() => {
                 onClose();
-                // iOS ne peut pas présenter un nouveau modal pendant qu'un autre
-                // se dismisse. On attend la fin de l'animation de fermeture (~300ms).
+                // iOS ne peut pas présenter un nouveau modal pendant qu'un autre se dismisse.
                 setTimeout(() => onEdit(), 350);
               }}
               className="flex-row items-center gap-4 bg-surface-elevated rounded-2xl px-4 py-4 active:opacity-70"
@@ -109,7 +103,6 @@ export function OptionsSheet({
             )}
           </View>
 
-          {/* Cancel */}
           <Pressable
             onPress={onClose}
             className="mt-4 py-4 items-center active:opacity-50"

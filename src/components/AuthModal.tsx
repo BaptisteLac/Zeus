@@ -88,7 +88,6 @@ export default function AuthModal({
         <Pressable className="flex-1 bg-black/60" onPress={handleClose} />
 
         <View className="bg-surface rounded-t-3xl border-t border-border">
-          {/* Handle */}
           <View className="w-10 h-1 bg-border rounded-full self-center mt-3 mb-5" />
 
           <ScrollView
@@ -96,7 +95,6 @@ export default function AuthModal({
             contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
           >
             {userEmail ? (
-              /* ── Connected state ─────────────────────────── */
               <View className="items-center py-4 gap-3">
                 <View className="w-16 h-16 rounded-full bg-success/10 items-center justify-center mb-1">
                   <Text className="text-3xl">✓</Text>
@@ -120,9 +118,7 @@ export default function AuthModal({
                 </Pressable>
               </View>
             ) : (
-              /* ── Sign in / sign up form ──────────────────── */
               <>
-                {/* Tabs */}
                 <View className="flex-row bg-background p-1 rounded-xl mb-6 border border-border/50">
                   {(["signin", "signup"] as const).map((m) => (
                     <Pressable
@@ -131,14 +127,12 @@ export default function AuthModal({
                         setMode(m);
                         setError("");
                       }}
-                      className={`flex-1 py-2.5 rounded-lg items-center ${
-                        mode === m ? "bg-primary" : ""
-                      }`}
+                      className={`flex-1 py-2.5 rounded-lg items-center ${mode === m ? "bg-primary" : ""
+                        }`}
                     >
                       <Text
-                        className={`text-sm font-medium ${
-                          mode === m ? "text-white" : "text-foreground-muted"
-                        }`}
+                        className={`text-sm font-medium ${mode === m ? "text-white" : "text-foreground-muted"
+                          }`}
                       >
                         {m === "signin" ? "Se connecter" : "Créer un compte"}
                       </Text>
@@ -146,7 +140,6 @@ export default function AuthModal({
                   ))}
                 </View>
 
-                {/* Email */}
                 <Text className="text-foreground-muted text-[11px] uppercase tracking-wider mb-2">
                   Email
                 </Text>
@@ -161,7 +154,6 @@ export default function AuthModal({
                   className="bg-background border border-border rounded-xl px-4 py-3.5 text-foreground mb-4"
                 />
 
-                {/* Password */}
                 <Text className="text-foreground-muted text-[11px] uppercase tracking-wider mb-2">
                   Mot de passe
                 </Text>
@@ -190,7 +182,6 @@ export default function AuthModal({
                   </Text>
                 )}
 
-                {/* Error */}
                 {error ? (
                   <View className="bg-error/10 border border-error/20 rounded-xl px-4 py-3 mt-3 mb-1">
                     <Text className="text-error text-sm">{error}</Text>
@@ -199,7 +190,6 @@ export default function AuthModal({
                   <View className="h-4" />
                 )}
 
-                {/* Submit */}
                 <Pressable
                   onPress={handleSubmit}
                   disabled={loading || !email.trim() || !password}
@@ -223,7 +213,6 @@ export default function AuthModal({
               </>
             )}
 
-            {/* Close */}
             <Pressable onPress={handleClose} className="mt-4 py-3 items-center">
               <Text className="text-foreground-muted text-sm">Fermer</Text>
             </Pressable>

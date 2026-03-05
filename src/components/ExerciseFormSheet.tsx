@@ -39,7 +39,6 @@ const DEFAULTS: Omit<Exercise, "id"> = {
 
 const RIR_OPTIONS = ["0", "1", "1-2", "2", "2-3"] as const;
 
-// ─── SectionLabel ─────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: string }) {
   return (
     <Text style={{
@@ -55,7 +54,6 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
-// ─── Stepper ──────────────────────────────────────────────────────────────────
 interface StepperProps {
   label: string;
   value: number | "";
@@ -70,7 +68,6 @@ function Stepper({ label, value, onChange, step = 1, min = 0, suffix }: StepperP
     <View style={{ flex: 1 }}>
       <SectionLabel>{label}</SectionLabel>
       <View style={{ flexDirection: "row", alignItems: "center", height: 44 }}>
-        {/* − */}
         <Pressable
           onPress={() => onChange(Math.max(min, numVal - step))}
           style={({ pressed }) => ({
@@ -85,7 +82,6 @@ function Stepper({ label, value, onChange, step = 1, min = 0, suffix }: StepperP
           <Text style={{ fontSize: 18, fontWeight: "300", color: Colors.foreground, lineHeight: 20 }}>−</Text>
         </Pressable>
 
-        {/* Valeur */}
         <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2 }}>
           <TextInput
             value={value === "" ? "" : String(value)}
@@ -110,7 +106,6 @@ function Stepper({ label, value, onChange, step = 1, min = 0, suffix }: StepperP
           )}
         </View>
 
-        {/* + */}
         <Pressable
           onPress={() => onChange(numVal + step)}
           style={({ pressed }) => ({
@@ -129,7 +124,6 @@ function Stepper({ label, value, onChange, step = 1, min = 0, suffix }: StepperP
   );
 }
 
-// ─── ExerciseFormSheet ────────────────────────────────────────────────────────
 export default function ExerciseFormSheet({
   open,
   onOpenChange,
@@ -141,7 +135,6 @@ export default function ExerciseFormSheet({
   const insets = useSafeAreaInsets();
   const isEditMode = !!exercise;
 
-  // ── State ──────────────────────────────────────────────────────────────────
   const [name, setName] = useState("");
   const [sets, setSets] = useState<number | "">(DEFAULTS.sets);
   const [rest, setRest] = useState<number | "">(DEFAULTS.rest);
@@ -151,7 +144,6 @@ export default function ExerciseFormSheet({
   const [rir, setRir] = useState(DEFAULTS.rir);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // ── Animation ──────────────────────────────────────────────────────────────
   const translateY = useRef(new Animated.Value(500)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
 
@@ -187,7 +179,6 @@ export default function ExerciseFormSheet({
     }
   }, [open, exercise]);
 
-  // ── Autocomplete ───────────────────────────────────────────────────────────
   const filteredCatalog = catalog
     .filter((e) => !isEditMode && name.trim() && e.name.toLowerCase().includes(name.toLowerCase().trim()))
     .slice(0, 5);
@@ -206,7 +197,6 @@ export default function ExerciseFormSheet({
     setShowSuggestions(false);
   };
 
-  // ── Validation ─────────────────────────────────────────────────────────────
   const canSubmit =
     name.trim().length > 0 &&
     typeof sets === "number" && sets > 0 &&
@@ -242,7 +232,6 @@ export default function ExerciseFormSheet({
     );
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <Modal
       visible={open}
@@ -253,7 +242,6 @@ export default function ExerciseFormSheet({
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <View style={{ flex: 1, justifyContent: "flex-end" }}>
 
-          {/* ── Backdrop ───────────────────────────────────────────────── */}
           <TouchableWithoutFeedback onPress={() => onOpenChange(false)}>
             <Animated.View
               style={[
@@ -263,7 +251,6 @@ export default function ExerciseFormSheet({
             />
           </TouchableWithoutFeedback>
 
-          {/* ── Sheet ──────────────────────────────────────────────────── */}
           <Animated.View style={{
             backgroundColor: Colors.surfaceElevated,
             borderTopLeftRadius: 28,
@@ -272,7 +259,6 @@ export default function ExerciseFormSheet({
             paddingBottom: Math.max(insets.bottom, 16),
             transform: [{ translateY }],
           }}>
-            {/* Handle */}
             <View style={{
               width: 36,
               height: 4,
@@ -288,7 +274,6 @@ export default function ExerciseFormSheet({
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16, gap: 16 }}
             >
-              {/* ── Header ─────────────────────────────────────────────── */}
               <View style={{ gap: 4, marginBottom: 8 }}>
                 <Text style={{
                   fontSize: 24,
@@ -303,7 +288,6 @@ export default function ExerciseFormSheet({
                 </Text>
               </View>
 
-              {/* ── Nom ────────────────────────────────────────────────── */}
               <View>
                 <SectionLabel>Nom de l'exercice</SectionLabel>
                 <TextInput
@@ -329,7 +313,6 @@ export default function ExerciseFormSheet({
                   }}
                 />
 
-                {/* Autocomplete */}
                 {showSuggestions && !isEditMode && (filteredCatalog.length > 0 || !exactMatch) && (
                   <View style={{
                     marginTop: 6,
@@ -411,7 +394,6 @@ export default function ExerciseFormSheet({
                 )}
               </View>
 
-              {/* ── Charge ─────────────────────────────────────────────── */}
               <View>
                 <SectionLabel>Charge initiale</SectionLabel>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 54 }}>
@@ -481,7 +463,6 @@ export default function ExerciseFormSheet({
                 </View>
               </View>
 
-              {/* ── Séries + Repos ──────────────────────────────────────── */}
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <View style={{
                   flex: 1,
@@ -507,7 +488,6 @@ export default function ExerciseFormSheet({
                 </View>
               </View>
 
-              {/* ── Reps Min + Reps Max ─────────────────────────────────── */}
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <View style={{
                   flex: 1,
@@ -533,7 +513,6 @@ export default function ExerciseFormSheet({
                 </View>
               </View>
 
-              {/* ── RIR ────────────────────────────────────────────────── */}
               <View>
                 <SectionLabel>RIR Cible</SectionLabel>
                 <View style={{
@@ -571,7 +550,6 @@ export default function ExerciseFormSheet({
               </View>
             </ScrollView>
 
-            {/* ── Footer ─────────────────────────────────────────────────── */}
             <View style={{
               paddingHorizontal: 24,
               paddingTop: 16,
@@ -580,7 +558,6 @@ export default function ExerciseFormSheet({
               borderTopWidth: StyleSheet.hairlineWidth,
               borderTopColor: Colors.border,
             }}>
-              {/* CTA principal */}
               <Pressable
                 onPress={handleSubmit}
                 disabled={!canSubmit}

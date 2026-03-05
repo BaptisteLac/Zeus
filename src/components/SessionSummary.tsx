@@ -34,7 +34,6 @@ export default function SessionSummary({
   const completedCount = savedExercises.size;
   const totalCount = exercises.length;
 
-  // ─── Volume actuel (séance d'aujourd'hui) ────────────────────────────────────
   const totalVolume = exercises.reduce((acc, ex) => {
     const history = workoutData[ex.id] || [];
     if (history.length === 0) return acc;
@@ -43,7 +42,6 @@ export default function SessionSummary({
     return acc + latest.charge * repsTotal;
   }, 0);
 
-  // ─── Volume de la séance précédente (mêmes exercices = même type de séance) ──
   const previousVolume = exercises.reduce((acc, ex) => {
     const history = workoutData[ex.id] || [];
     if (history.length < 2) return acc;
@@ -59,10 +57,9 @@ export default function SessionSummary({
   const deltaDisplay = isImprovement
     ? `+${volumeDelta.toLocaleString("fr-FR")} kg`
     : volumeDelta === 0
-    ? `= même volume`
-    : `−${Math.abs(volumeDelta).toLocaleString("fr-FR")} kg`;
+      ? `= même volume`
+      : `−${Math.abs(volumeDelta).toLocaleString("fr-FR")} kg`;
 
-  // ─── Count-up animé : 0 → totalVolume sur 900ms (ease-out √) ────────────────
   const [displayVolume, setDisplayVolume] = useState(0);
   useEffect(() => {
     if (!visible) {
@@ -81,7 +78,6 @@ export default function SessionSummary({
     return () => clearInterval(id);
   }, [visible, totalVolume]);
 
-  // ─── Progressions ────────────────────────────────────────────────────────────
   const progressions = exercises
     .map((ex) => {
       const history = workoutData[ex.id] || [];
@@ -110,7 +106,6 @@ export default function SessionSummary({
     >
       <View style={StyleSheet.absoluteFill} className="bg-background/95 items-center justify-center px-6">
         <View className="w-full max-w-sm bg-surface rounded-2xl overflow-hidden border border-border">
-          {/* Header */}
           <View className="bg-primary px-6 py-6 items-center">
             <Text className="text-4xl mb-2">🎉</Text>
             <Text className="text-white text-2xl font-semibold tracking-tight">
@@ -125,9 +120,7 @@ export default function SessionSummary({
             contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 20, gap: 16 }}
             showsVerticalScrollIndicator={false}
           >
-            {/* Stats grid */}
             <View className="flex-row gap-3">
-              {/* Volume card — count-up animé + comparaison séance précédente */}
               <View className="flex-1 bg-background rounded-xl p-4 items-center">
                 <Text
                   style={[
@@ -167,7 +160,6 @@ export default function SessionSummary({
                 )}
               </View>
 
-              {/* Exercices card */}
               <View className="flex-1 bg-background rounded-xl p-4 items-center">
                 <Text
                   style={[
@@ -183,7 +175,6 @@ export default function SessionSummary({
               </View>
             </View>
 
-            {/* Progressions */}
             {improvements.length > 0 && (
               <View>
                 <Text className="text-foreground-muted text-xs uppercase tracking-wider mb-2">
@@ -203,7 +194,6 @@ export default function SessionSummary({
               </View>
             )}
 
-            {/* Stagnations */}
             {stagnations.length > 0 && (
               <View>
                 <Text className="text-foreground-muted text-xs uppercase tracking-wider mb-2">
@@ -226,7 +216,6 @@ export default function SessionSummary({
             )}
           </ScrollView>
 
-          {/* CTA */}
           <View className="px-5 pb-6 pt-2">
             <Pressable
               onPress={onClose}

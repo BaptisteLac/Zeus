@@ -1,18 +1,3 @@
-/**
- * DynamicIslandPill — Timer de repos flottant, global, omniprésent
- * Phase 6
- *
- * Rendu dans _layout.tsx au-dessus du Stack de navigation.
- * Toujours monté, jamais démonté. Visibility gérée par animation.
- *
- * 3 états visuels :
- *  - Inactif   → opacity 0, translateY -60 (invisible, non-interactive)
- *  - En cours  → pill compacte, fond surface, bordure accent
- *  - Terminé   → pill pulsée en boucle, couleur emotional
- *
- * Tap → bottom sheet avec contexte complet (exercice, prochaine série, dismiss)
- */
-
 import { useEffect, useState } from 'react';
 import {
   Modal,
@@ -37,16 +22,12 @@ import { Colors, BorderRadius } from '@/theme/colors';
 import { Typography } from '@/theme/typography';
 import { useHaptics } from '@/hooks/useHaptics';
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
-
 function formatTime(totalSeconds: number): string {
   const abs = Math.abs(totalSeconds);
   const m = Math.floor(abs / 60);
   const s = abs % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export function DynamicIslandPill() {
   const { isActive, duration, startedAt, exerciseName, nextSet, stopTimer } =
@@ -59,7 +40,6 @@ export function DynamicIslandPill() {
 
   const isOvertime = isActive && remaining < 0;
 
-  // ─── Countdown ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isActive || !startedAt) {
       setRemaining(0);
@@ -74,12 +54,11 @@ export function DynamicIslandPill() {
         stopTimer();
       }
     };
-    tick(); // Mise à jour immédiate sans attendre 1s
+    tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [isActive, startedAt, duration]);
 
-  // ─── Animations pill (show/hide) ────────────────────────────────────────────
   const pillOpacity = useSharedValue(0);
   const pillTranslateY = useSharedValue(-60);
 
@@ -93,12 +72,10 @@ export function DynamicIslandPill() {
     }
   }, [isActive]);
 
-  // ─── Animation pulse (repos terminé) ────────────────────────────────────────
   const pulseScale = useSharedValue(1);
 
   useEffect(() => {
     if (isOvertime) {
-      // scale 1→1.05→1 en boucle infinie
       pulseScale.value = withRepeat(
         withSequence(
           withTiming(1.05, { duration: 600 }),
@@ -108,7 +85,6 @@ export function DynamicIslandPill() {
         false,
       );
     } else {
-      // Interrompt withRepeat et revient à 1
       cancelAnimation(pulseScale);
       pulseScale.value = withTiming(1, { duration: 200 });
     }
@@ -122,7 +98,6 @@ export function DynamicIslandPill() {
     ],
   }));
 
-  // ─── Animations sheet ───────────────────────────────────────────────────────
   const sheetTranslateY = useSharedValue(400);
   const sheetOpacity = useSharedValue(0);
 
@@ -143,8 +118,6 @@ export function DynamicIslandPill() {
     transform: [{ translateY: sheetTranslateY.value }],
   }));
 
-  // ─── Handlers ───────────────────────────────────────────────────────────────
-
   const handlePillTap = () => {
     haptics.light();
     setShowSheet(true);
@@ -156,16 +129,13 @@ export function DynamicIslandPill() {
     haptics.medium();
   };
 
-  // ─── Couleurs selon l'état ──────────────────────────────────────────────────
   const accentColor = isOvertime ? Colors.emotional : Colors.accent;
   const timeColor = isOvertime ? Colors.emotional : Colors.foreground;
   const timePrefix = isOvertime ? '+' : '';
 
   return (
     <>
-      {/* ── Pill flottante ────────────────────────────────────────────────── */}
       <Animated.View
-        // Non-interactive quand invisible
         pointerEvents={isActive ? 'box-none' : 'none'}
         style={[
           pillStyle,
@@ -193,7 +163,6 @@ export function DynamicIslandPill() {
               backgroundColor: Colors.surface,
             }}
           >
-            {/* Dot de statut */}
             <View
               style={{
                 width: 8,
@@ -202,8 +171,6 @@ export function DynamicIslandPill() {
                 backgroundColor: accentColor,
               }}
             />
-
-            {/* Chrono — tabular-nums pour éviter le "digit jump" */}
             <Text
               style={{
                 fontVariant: ['tabular-nums'],
@@ -219,7 +186,6 @@ export function DynamicIslandPill() {
         </Pressable>
       </Animated.View>
 
-      {/* ── Bottom sheet contextuel ───────────────────────────────────────── */}
       <Modal
         visible={showSheet}
         transparent
@@ -227,7 +193,6 @@ export function DynamicIslandPill() {
         onRequestClose={() => setShowSheet(false)}
       >
         <View style={StyleSheet.absoluteFill} className="justify-end">
-          {/* Backdrop */}
           <TouchableWithoutFeedback onPress={() => setShowSheet(false)}>
             <Animated.View
               style={[
@@ -238,7 +203,6 @@ export function DynamicIslandPill() {
             />
           </TouchableWithoutFeedback>
 
-          {/* Sheet */}
           <Animated.View
             style={[
               sheetStyle,
@@ -246,17 +210,14 @@ export function DynamicIslandPill() {
             ]}
             className="bg-surface-elevated rounded-t-3xl px-6 pt-3"
           >
-            {/* Handle */}
             <View className="w-10 h-1 bg-border rounded-full mx-auto mb-6" />
 
-            {/* Label exercice */}
             {exerciseName ? (
               <Text style={[Typography.label, { marginBottom: 6 }]}>
                 {exerciseName.toUpperCase()}
               </Text>
             ) : null}
 
-            {/* Temps restant — grand affichage */}
             <Text
               style={[
                 Typography.dataLarge,
@@ -268,12 +229,10 @@ export function DynamicIslandPill() {
                 : formatTime(remaining)}
             </Text>
 
-            {/* État */}
             <Text style={[Typography.bodyMuted, { marginBottom: 4 }]}>
               {isOvertime ? 'Repos dépassé — prêt quand tu veux' : 'Repos en cours'}
             </Text>
 
-            {/* Prochaine série */}
             {nextSet ? (
               <Text style={[Typography.body, { marginBottom: 28 }]}>
                 Prochaine série ·{' '}
@@ -285,7 +244,6 @@ export function DynamicIslandPill() {
               <View style={{ marginBottom: 28 }} />
             )}
 
-            {/* Bouton Arrêter */}
             <Pressable
               onPress={handleDismiss}
               style={({ pressed }) => ({

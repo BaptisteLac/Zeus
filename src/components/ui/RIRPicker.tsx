@@ -1,30 +1,3 @@
-/**
- * RIRPicker — Mode B de saisie : roue de sélection en bottom sheet
- * Phase 5: Saisie numérique
- *
- * Pattern identique à OptionsSheet.tsx (Modal + reanimated).
- * Aucun BottomSheetModalProvider requis dans _layout.tsx.
- *
- * Usage :
- *   const [rir, setRir] = useState(1);
- *   const [open, setOpen] = useState(false);
- *
- *   <Pressable onPress={() => setOpen(true)}>
- *     <Text>RIR {rir}</Text>
- *   </Pressable>
- *   <RIRPicker
- *     value={rir}
- *     onChange={setRir}
- *     items={RIR_ITEMS}
- *     visible={open}
- *     onClose={() => setOpen(false)}
- *     label="RIR Ressenti"
- *   />
- *
- * Items prédéfinis exportés :
- *   RIR_ITEMS   — RIR 0 à RIR 5
- */
-
 import { useEffect } from 'react';
 import {
   Modal,
@@ -45,8 +18,6 @@ import { Colors } from '@/theme/colors';
 import { Typography } from '@/theme/typography';
 import { useHaptics } from '@/hooks/useHaptics';
 
-// ─── Items prédéfinis ─────────────────────────────────────────────────────────
-
 export interface PickerItem {
   label: string;
   value: number;
@@ -56,8 +27,6 @@ export const RIR_ITEMS: PickerItem[] = [0, 1, 2, 3, 4, 5].map((v) => ({
   label: `RIR ${v}`,
   value: v,
 }));
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 interface RIRPickerProps {
   value: number;
@@ -79,7 +48,6 @@ export function RIRPicker({
   const insets = useSafeAreaInsets();
   const haptics = useHaptics();
 
-  // Mêmes animations que OptionsSheet.tsx
   const translateY = useSharedValue(400);
   const opacity = useSharedValue(0);
 
@@ -109,7 +77,6 @@ export function RIRPicker({
       onRequestClose={onClose}
     >
       <View style={StyleSheet.absoluteFill} className="justify-end">
-        {/* Backdrop — tap pour fermer */}
         <TouchableWithoutFeedback onPress={onClose}>
           <Animated.View
             style={[
@@ -120,15 +87,12 @@ export function RIRPicker({
           />
         </TouchableWithoutFeedback>
 
-        {/* Sheet */}
         <Animated.View
           style={[sheetStyle, { paddingBottom: Math.max(insets.bottom, 16) }]}
           className="bg-surface-elevated rounded-t-3xl"
         >
-          {/* Handle */}
           <View className="w-10 h-1 bg-border rounded-full mx-auto mt-3 mb-4" />
 
-          {/* Label */}
           <Text
             style={[
               Typography.label,
@@ -142,7 +106,6 @@ export function RIRPicker({
             {label.toUpperCase()}
           </Text>
 
-          {/* Picker wheel — UIPickerView sur iOS, Spinner sur Android */}
           <View
             style={{
               backgroundColor: Colors.surfaceElevated,
@@ -155,7 +118,6 @@ export function RIRPicker({
                 haptics.light();
                 onChange(itemValue);
               }}
-              // itemStyle : iOS uniquement — définit la typo de la roue
               itemStyle={{
                 color: Colors.foreground,
                 fontSize: 20,
@@ -167,14 +129,12 @@ export function RIRPicker({
                   key={item.value}
                   label={item.label}
                   value={item.value}
-                  // color fonctionne sur Android pour le texte de chaque item
                   color={Colors.foreground}
                 />
               ))}
             </Picker>
           </View>
 
-          {/* Bouton Confirmer — style primary (Phase 2) */}
           <Pressable
             onPress={onClose}
             style={({ pressed }) => ({
