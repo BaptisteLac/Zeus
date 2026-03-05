@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.zeus.workout",
+      "bundleIdentifier": "com.zeus.workout.baptistetest",
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Requis pour scanner des QR codes.",
@@ -46,8 +46,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
-      }
+        "projectId": "47700d00-db49-404d-adac-6088172e8502"
+      },
+      "router": {}
     }
   }
 }
